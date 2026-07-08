@@ -31,7 +31,7 @@ def test_dataset_manifest_smoke(tmp_path):
     manifest = tmp_path / "manifest.csv"
     with open(manifest, "w") as f:
         f.write("filename,label,params\n")
-        f.write(f"{wav_path.as_posix()},clean,{}\n")
+        f.write(f"{wav_path.as_posix()},clean,{{}}\n")
     ds = GuitarEffectsDataset(str(manifest), sr=sr, duration=1.0, feature="log-mel")
     x, y = ds[0]
     assert x.ndim == 2
