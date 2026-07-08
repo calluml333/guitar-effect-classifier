@@ -1,0 +1,50 @@
+{
+  "name": "Guitar Effects Classifier",
+  "image": "mcr.microsoft.com/devcontainers/python:3.11",
+  "features": {
+    "ghcr.io/devcontainers/features/git:1": {},
+    "ghcr.io/devcontainers/features/github-cli:1": {}
+  },
+  "buildArg": {
+    "VARIANT": "3.11"
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-python.python",
+        "ms-python.vscode-pylance",
+        "ms-python.black-formatter",
+        "ms-python.flake8",
+        "ms-toolsengineering.windowssubsystemforandroid",
+        "ms-python.debugpy",
+        "charliermarsh.ruff",
+        "eamodio.gitlens",
+        "Jupyter.jupyter",
+        "Jupyter.jupyter-keymap",
+        "ms-toolsengineering.microsoft-todos"
+      ],
+      "settings": {
+        "python.defaultInterpreterPath": "/usr/local/bin/python",
+        "python.formatting.provider": "black",
+        "[python]": {
+          "editor.defaultFormatter": "ms-python.python",
+          "editor.formatOnSave": true,
+          "editor.codeActionsOnSave": {
+            "source.organizeImports": true
+          }
+        },
+        "python.linting.enabled": true,
+        "python.linting.pylintEnabled": false,
+        "python.linting.flake8Enabled": true,
+        "python.linting.flake8Args": ["--max-line-length=100"],
+        "python.testing.pytestEnabled": true,
+        "python.testing.pytestArgs": ["tests"]
+      }
+    }
+  },
+  "postCreateCommand": "pip install --upgrade pip && pip install -e . && pip install -e .[dev]",
+  "remoteUser": "vscode",
+  "mounts": [
+    "source=${localEnv:HOME}/.cache,target=/home/vscode/.cache,type=bind"
+  ]
+}
