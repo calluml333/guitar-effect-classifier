@@ -103,23 +103,16 @@ def waveform_to_log_mel(
 	"""
 	if f_max is None:
 		f_max = float(sr // 2)
-	# ensure 2D (channels, samples)
-	if wave.dim() == 1:
-		wave = wave.unsqueeze(0)
-	mel_spec_transform = torchaudio.transforms.MelSpectrogram(
-		sample_rate=sr,
-		n_fft=n_fft,
-		hop_length=hop_length,
-		n_mels=n_mels,
-		f_min=f_min,
-		f_max=f_max,
-		power=2.0,
+	# ensure 1D numpy array
+	if wave.dim() == 2:
+		wave_np = wave.mean(dim=0).cpu().numpy()
+	else:
+		wave_np = wave.cpu().numpy()
+	S = librosa.feature.melspectrogram(
+		y=wave_np, sr=sr, n_fft=n_fft, hop_length=hop_length, n_mels=n_mels, fmin=f_min, fmax=f_max, power=2.0
 	)
-	spect = mel_spec_transform(wave)
-	db_transform = torchaudio.transforms.AmplitudeToDB(stype="power")
-	log_mel = db_transform(spect)
-	# squeeze channel dim
-	return log_mel.squeeze(0)
+	log_mel = librosa.power_to_db(S, ref=np.max)
+	return torch.from_numpy(log_mel).to(torch.float32)
 
 
 def normalize_wave_rms(wave: torch.Tensor, target_rms: float = 0.1) -> torch.Tensor:
