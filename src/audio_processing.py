@@ -8,7 +8,8 @@ Functions return PyTorch tensors (float32).
 from typing import Optional, Tuple
 
 import torch
-import torchaudio
+import soundfile as sf
+import librosa
 import numpy as np
 
 
@@ -33,13 +34,25 @@ def load_audio(
 	Returns:
 		1-D `torch.Tensor` of shape (samples,) dtype float32.
 	"""
-	waveform, orig_sr = torchaudio.load(path)
+	data, orig_sr = sf.read(path, dtype="float32")
+	# data shape: (samples,) or (samples, channels)
+	if data.ndim == 2:
+		# convert to mono by averaging channels if requested
+		if mono:
+			data = data.mean(axis=1)
+		else:
+			# keep channels-first format
+			data = data.T
+	# resample if needed
 	if orig_sr != sr:
-		waveform = torchaudio.transforms.Resample(orig_sr, sr)(waveform)
-	if mono and waveform.shape[0] > 1:
-		waveform = waveform.mean(dim=0, keepdim=True)
-	# waveform shape: (channels, samples)
-	wave = waveform.squeeze(0)
+		if data.ndim == 1:
+			data = librosa.resample(data, orig_sr, sr)
+		else:
+			data = np.stack([librosa.resample(d, orig_sr, sr) for d in data], axis=0)
+	# convert to torch tensor
+	wave = torch.from_numpy(data).to(torch.float32)
+	if wave.dim() == 2 and wave.shape[0] > 1 and mono:
+		wave = wave.mean(dim=0)
 
 	if trim_db is not None:
 		# simple energy-based trim: compute frame-wise dB and find region above threshold
