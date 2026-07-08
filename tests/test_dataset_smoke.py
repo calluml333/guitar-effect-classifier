@@ -14,7 +14,8 @@ def test_load_audio_and_log_mel():
     wave = 0.1 * torch.sin(2 * 440.0 * 2 * 3.14159 * t)
     tmpdir = tempfile.TemporaryDirectory()
     p = Path(tmpdir.name) / "test.wav"
-    torchaudio.save(str(p), wave.unsqueeze(0), sr)
+    import soundfile as sf
+    sf.write(str(p), wave.numpy(), sr)
     loaded = load_audio(str(p), sr=sr, duration=1.0)
     assert isinstance(loaded, torch.Tensor)
     mel = waveform_to_log_mel(loaded, sr=sr)
@@ -27,7 +28,8 @@ def test_dataset_manifest_smoke(tmp_path):
     sr = 16000
     t = torch.linspace(0, 1.0, int(sr * 1.0))
     wave = 0.1 * torch.sin(2 * 440.0 * 2 * 3.14159 * t)
-    torchaudio.save(str(wav_path), wave.unsqueeze(0), sr)
+    import soundfile as sf
+    sf.write(str(wav_path), wave.numpy(), sr)
     manifest = tmp_path / "manifest.csv"
     with open(manifest, "w") as f:
         f.write("filename,label,params\n")
