@@ -3,16 +3,20 @@
 Usage:
     python -m src.train --manifest data/manifest.csv --feature hf --epochs 10
 """
-from pathlib import Path
 import argparse
 import time
+from pathlib import Path
 from typing import Tuple
 
+import numpy as np
 import torch
 import torch.nn as nn
+from sklearn.metrics import (
+    accuracy_score,
+    confusion_matrix,
+    precision_recall_fscore_support,
+)
 from torch.utils.data import DataLoader
-import numpy as np
-from sklearn.metrics import accuracy_score, precision_recall_fscore_support, confusion_matrix
 
 from src.dataset import GuitarEffectsDataset
 from src.model import build_classifier_from_dataset_sample

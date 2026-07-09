@@ -7,10 +7,10 @@ Functions return PyTorch tensors (float32).
 """
 from typing import Optional, Tuple
 
-import torch
-import soundfile as sf
 import librosa
 import numpy as np
+import soundfile as sf
+import torch
 
 
 def load_audio(

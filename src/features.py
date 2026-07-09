@@ -1,9 +1,9 @@
 """Wrappers for extracting embeddings from Hugging Face pretrained audio models."""
 from typing import Optional
 
+import numpy as np
 import torch
 from transformers import AutoFeatureExtractor, AutoModel
-import numpy as np
 
 
 class HFEmbedder:

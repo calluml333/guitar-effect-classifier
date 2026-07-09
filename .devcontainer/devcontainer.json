@@ -42,7 +42,7 @@
       }
     }
   },
-  "postCreateCommand": "poetry install --no-interaction --with dev --with demo",
+  "postCreateCommand": "python -m pip install --user --upgrade pip poetry && export PATH=$HOME/.local/bin:$PATH && poetry config virtualenvs.in-project true && poetry install --no-interaction --with dev --with demo",
   "remoteUser": "vscode",
   "mounts": [
     "source=${localEnv:HOME}/.cache,target=/home/vscode/.cache,type=bind"

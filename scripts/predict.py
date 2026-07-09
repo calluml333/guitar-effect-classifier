@@ -1,7 +1,7 @@
 """Inference CLI for guitar effect classification."""
 import argparse
 
-from src.predict import predict_audio, format_predictions
+from src.predict import format_predictions, predict_audio
 
 
 def main():

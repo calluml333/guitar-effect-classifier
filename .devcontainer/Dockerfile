@@ -20,7 +20,8 @@ RUN apt-get update && apt-get install -y \
 # For GPU support, uncomment the appropriate torch installation command
 RUN pip install --upgrade pip && \
     pip install poetry && \
-    pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu
+    pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu && \
+    echo 'export PATH=/home/vscode/.local/bin:$PATH' >> /home/vscode/.bashrc
 
 # For NVIDIA GPU support (uncomment if using GPU):
 # RUN pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
