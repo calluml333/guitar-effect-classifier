@@ -19,6 +19,7 @@ RUN apt-get update && apt-get install -y \
 # Install PyTorch with CUDA support (CPU only for dev container by default)
 # For GPU support, uncomment the appropriate torch installation command
 RUN pip install --upgrade pip && \
+    pip install poetry && \
     pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu
 
 # For NVIDIA GPU support (uncomment if using GPU):
@@ -26,17 +27,15 @@ RUN pip install --upgrade pip && \
 
 # Copy project code
 WORKDIR /workspace
+COPY . /workspace
 
-# Copy requirements
-COPY requirements.txt .
-RUN pip install -r requirements.txt
-
-# Install development dependencies
-COPY pyproject.toml .
-RUN pip install -e . && pip install -e ".[dev]"
+# Configure Poetry to create environment inside the project and install dependencies.
+RUN poetry config virtualenvs.in-project true && \
+    poetry install --no-interaction --with dev --with demo
 
 ENV PYTHONUNBUFFERED=1
 ENV PYTHONDONTWRITEBYTECODE=1
+ENV PATH="/workspace/.venv/bin:$PATH"
 
 # Set up non-root user
 RUN useradd -m -s /bin/bash devuser && \
