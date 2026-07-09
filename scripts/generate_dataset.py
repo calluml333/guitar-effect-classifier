@@ -64,7 +64,7 @@ def process_file(path: Path, out_dir: Path, sr: int, samples_per_input: int = 1)
     wave_np, orig_sr = sf.read(str(path))
     wave_np = ensure_mono(np.asarray(wave_np))
     if orig_sr != sr:
-        wave_np = librosa.resample(wave_np.astype(np.float32), orig_sr, sr)
+        wave_np = librosa.resample(wave_np.astype(np.float32), orig_sr=orig_sr, target_sr=sr)
     results = []
     for effect in EFFECTS:
         for i in range(samples_per_input):

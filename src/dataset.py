@@ -56,14 +56,18 @@ class GuitarEffectsDataset(Dataset):
 		row = self.df.iloc[idx]
 		filepath = row["filename"]
 		label = row["label"]
-		wave = load_audio(filepath, sr=self.sr, duration=self.duration)
+		load_sr = self.sr
+		if self.feature == "hf" and self.hf is not None:
+			# Avoid double resampling by loading directly at the HF model rate.
+			load_sr = self.hf.sampling_rate
+		wave = load_audio(filepath, sr=load_sr, duration=self.duration)
 		if self.feature == "waveform":
 			return wave, self.label2idx[label]
 		if self.feature == "log-mel":
 			mel = waveform_to_log_mel(wave, sr=self.sr)
 			return mel, self.label2idx[label]
 		if self.feature == "hf":
-			emb = self.hf.extract(wave, sr=self.sr)
+			emb = self.hf.extract(wave, sr=load_sr)
 			return emb, self.label2idx[label]
 		raise ValueError(f"Unknown feature type: {self.feature}")
 

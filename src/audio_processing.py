@@ -46,9 +46,9 @@ def load_audio(
 	# resample if needed
 	if orig_sr != sr:
 		if data.ndim == 1:
-			data = librosa.resample(data, orig_sr, sr)
+			data = librosa.resample(data, orig_sr=orig_sr, target_sr=sr)
 		else:
-			data = np.stack([librosa.resample(d, orig_sr, sr) for d in data], axis=0)
+			data = np.stack([librosa.resample(d, orig_sr=orig_sr, target_sr=sr) for d in data], axis=0)
 	# convert to torch tensor
 	wave = torch.from_numpy(data).to(torch.float32)
 	if wave.dim() == 2 and wave.shape[0] > 1 and mono:
