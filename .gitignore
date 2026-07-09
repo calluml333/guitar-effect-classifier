@@ -221,3 +221,5 @@ __marimo__/
 data/downloads/*
 data/raw/*
 data/synthetic/*
+data/generated/*
+data/manifest.csv

@@ -89,22 +89,6 @@ This will:
 - copy them into [data/raw/idmt_smt_guitar](data/raw/idmt_smt_guitar)
 - write a local manifest at [data/raw/idmt_smt_guitar/manifest.csv](data/raw/idmt_smt_guitar/manifest.csv)
 
-Manual manifest (demo)
-----------------------
-
-For quick demos you can prepare a manual CSV manifest and pass it to the installer instead of running discovery. A template is available at `data/idmt_manual_manifest.csv` — edit and uncomment rows to point to either:
-
-- `source_path`: an absolute or repo-relative path to a WAV file
-- OR `archive` + `relative_path`: the archive filename and path inside the archive
-
-Run using:
-
-```bash
-poetry run python scripts/install_idmt_guitar_dataset.py --manifest data/idmt_manual_manifest.csv
-```
-
-This is useful when you have a curated set of files to include for a demo.
-
 ## Generate synthetic data
 
 Place clean guitar audio files under [data/raw](data/raw), then run:

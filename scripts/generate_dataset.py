@@ -7,14 +7,32 @@ import argparse
 import csv
 import json
 import random
+import sys
+import time
 from pathlib import Path
 
+# Ensure the repository root is on sys.path so `from src...` imports work
+REPO_ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(REPO_ROOT))
+
+import librosa
 import numpy as np
-import torchaudio
+import soundfile as sf
 
 from src.effects import apply_effect_by_name
 
 EFFECTS = ["clean", "overdrive", "distortion", "fuzz", "chorus", "delay", "reverb"]
+
+
+def format_duration(seconds: float) -> str:
+    seconds = max(int(seconds), 0)
+    minutes, seconds = divmod(seconds, 60)
+    hours, minutes = divmod(minutes, 60)
+    if hours:
+        return f"{hours:d}h{minutes:02d}m{seconds:02d}s"
+    if minutes:
+        return f"{minutes:d}m{seconds:02d}s"
+    return f"{seconds:d}s"
 
 
 def random_params_for(effect: str):
@@ -35,19 +53,18 @@ def random_params_for(effect: str):
     return {}
 
 
-def ensure_mono(tensor):
-    if tensor.ndim == 2:
-        return tensor.mean(dim=0)
-    return tensor
+def ensure_mono(arr: np.ndarray) -> np.ndarray:
+    if arr.ndim == 2:
+        # mean across channels -> shape (n,)
+        return arr.mean(axis=1)
+    return arr
 
 
 def process_file(path: Path, out_dir: Path, sr: int, samples_per_input: int = 1):
-    waveform, orig_sr = torchaudio.load(str(path))
-    waveform = ensure_mono(waveform)
+    wave_np, orig_sr = sf.read(str(path))
+    wave_np = ensure_mono(np.asarray(wave_np))
     if orig_sr != sr:
-        resampler = torchaudio.transforms.Resample(orig_sr, sr)
-        waveform = resampler(waveform)
-    wave_np = waveform.squeeze(0).numpy()
+        wave_np = librosa.resample(wave_np.astype(np.float32), orig_sr, sr)
     results = []
     for effect in EFFECTS:
         for i in range(samples_per_input):
@@ -57,10 +74,13 @@ def process_file(path: Path, out_dir: Path, sr: int, samples_per_input: int = 1)
             label_dir.mkdir(parents=True, exist_ok=True)
             out_name = f"{path.stem}_{effect}_{i}.wav"
             out_path = label_dir / out_name
-            # save using torchaudio (expects tensor [channels, samples])
-            tensor = torchaudio.functional.to_tensor(processed).float()
-            torchaudio.save(str(out_path), tensor, sr)
-            results.append({"filename": str(out_path.relative_to(Path.cwd())), "label": effect, "params": json.dumps(params)})
+            # save using soundfile (writes numpy arrays)
+            sf.write(str(out_path), processed.astype(np.float32), sr)
+            try:
+                rel_name = str(Path(out_path).resolve().relative_to(REPO_ROOT))
+            except Exception:
+                rel_name = str(out_path)
+            results.append({"filename": rel_name, "label": effect, "params": json.dumps(params)})
     return results
 
 
@@ -74,16 +94,42 @@ def main(args):
     if not files:
         print(f"No WAV files found in {input_dir}. Place clean guitar WAVs there.")
         return
-    for p in files:
-        print(f"Processing {p}")
+    total_files = len(files)
+    started = time.perf_counter()
+
+    for idx, p in enumerate(files, start=1):
         rows.extend(process_file(p, out_dir, sr=args.sr, samples_per_input=args.samples_per_input))
+
+        elapsed = max(time.perf_counter() - started, 1e-6)
+        rate = idx / elapsed
+        eta = (total_files - idx) / rate if rate > 0 else 0.0
+        progress = idx / total_files
+        bar_width = 24
+        filled = int(progress * bar_width)
+        bar = "#" * filled + "-" * (bar_width - filled)
+        print(
+            f"\rGenerating: [{bar}] {idx}/{total_files} ({progress * 100:5.1f}%) "
+            f"Elapsed {format_duration(elapsed)} ETA {format_duration(eta)}",
+            end="",
+            flush=True,
+        )
+    print()
+
     # write manifest
     with open(manifest_path, "w", newline="") as f:
         writer = csv.DictWriter(f, fieldnames=["filename", "label", "params"])
         writer.writeheader()
         for r in rows:
             writer.writerow(r)
+    total_elapsed = time.perf_counter() - started
+    generated_files = total_files * len(EFFECTS) * args.samples_per_input
+    avg_files_per_sec = generated_files / total_elapsed if total_elapsed > 0 else 0.0
     print(f"Wrote manifest with {len(rows)} rows to {manifest_path}")
+    print(
+        "Generation summary: "
+        f"inputs={total_files}, outputs={generated_files}, "
+        f"elapsed={format_duration(total_elapsed)}, rate={avg_files_per_sec:.2f} files/s"
+    )
 
 
 if __name__ == "__main__":
@@ -95,7 +141,3 @@ if __name__ == "__main__":
     parser.add_argument("--samples-per-input", type=int, default=1, help="How many generated variants per input per effect")
     args = parser.parse_args()
     main(args)
-"""Placeholder: Generate synthetic guitar effects dataset."""
-
-if __name__ == "__main__":
-    pass
