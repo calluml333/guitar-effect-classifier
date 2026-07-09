@@ -63,6 +63,48 @@ poetry install --with dev --with demo
 source .venv/bin/activate
 ```
 
+## Install the IDMT-SMT-Guitar dataset locally
+
+If you want to use the IDMT-SMT-Guitar collection as your clean-source pool, you can install it locally without committing any downloaded files to Git.
+
+Preview the workflow first:
+
+```bash
+poetry run python scripts/install_idmt_guitar_dataset.py --dry-run
+```
+
+Then run the full setup:
+
+```bash
+poetry run python scripts/install_idmt_guitar_dataset.py \
+  --dataset-ids 2,3,4 \
+  --sample-rate 44100 \
+  --bit-depth 16
+```
+
+This will:
+- download the IDMT-SMT-Guitar Dataset into [data/downloads](data/downloads)
+- extract the archive locally
+- select clean WAV files matching the requested datasets
+- copy them into [data/raw/idmt_smt_guitar](data/raw/idmt_smt_guitar)
+- write a local manifest at [data/raw/idmt_smt_guitar/manifest.csv](data/raw/idmt_smt_guitar/manifest.csv)
+
+Manual manifest (demo)
+----------------------
+
+For quick demos you can prepare a manual CSV manifest and pass it to the installer instead of running discovery. A template is available at `data/idmt_manual_manifest.csv` — edit and uncomment rows to point to either:
+
+- `source_path`: an absolute or repo-relative path to a WAV file
+- OR `archive` + `relative_path`: the archive filename and path inside the archive
+
+Run using:
+
+```bash
+poetry run python scripts/install_idmt_guitar_dataset.py --manifest data/idmt_manual_manifest.csv
+```
+
+This is useful when you have a curated set of files to include for a demo.
+
 ## Generate synthetic data
 
 Place clean guitar audio files under [data/raw](data/raw), then run:

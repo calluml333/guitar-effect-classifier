@@ -1,0 +1,5 @@
+source_path,archive,relative_path,filename,samplerate,bit_depth,dataset_id
+,IDMT-SMT-GUITAR_V2.zip,dataset2/audio,,44100,PCM_16,2
+,IDMT-SMT-GUITAR_V2.zip,dataset3/audio,,44100,PCM_16,2
+,IDMT-SMT-GUITAR_V2.zip,dataset4/Carrer SG,,44100,PCM_16,4
+,IDMT-SMT-GUITAR_V2.zip,dataset4/Ibanez 2820,,44100,PCM_16,4
