@@ -31,9 +31,9 @@ docker-compose -f .devcontainer/docker-compose.yml exec dev python scripts/gener
 ### Option 3: Local Development (Without Container)
 
 ```bash
-python -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
+poetry env use python3.11
+poetry install --with dev --with demo
+source .venv/bin/activate
 ```
 
 ## What's Included
@@ -61,10 +61,10 @@ To enable GPU (NVIDIA CUDA):
 
 ```bash
 # Generate dataset
-python scripts/generate_dataset.py --num-samples 100
+python scripts/generate_dataset.py --input-dir data/raw --out-dir data/generated
 
 # Train model
-python scripts/train.py --epochs 30 --batch-size 32
+python -m src.train --epochs 30 --batch-size 32
 
 # Run tests
 pytest tests/
@@ -78,7 +78,10 @@ flake8 src/ scripts/
 
 ## Python Path
 
-When running in the dev container, the project is automatically installed as an editable package:
+The project uses `package-mode = false` in `pyproject.toml` — Poetry only manages
+the dependency environment, it doesn't install `src` as a package. Scripts and
+tests work because they're run from the repository root (or insert it onto
+`sys.path` themselves), so `import src` resolves against the working directory:
 ```bash
 python -c "import src; print(src.__version__)"
 ```

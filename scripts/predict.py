@@ -1,8 +1,14 @@
 """Inference CLI for guitar effect classification."""
 import argparse
+import sys
+from pathlib import Path
 
-from src import config
-from src.predict import format_predictions, predict_audio
+# Ensure the repository root is on sys.path so `from src...` imports work
+REPO_ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(REPO_ROOT))
+
+from src import config  # noqa: E402
+from src.predict import format_predictions, predict_audio  # noqa: E402
 
 
 def main():
