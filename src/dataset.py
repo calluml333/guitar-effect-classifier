@@ -18,57 +18,57 @@ from src.features import HFEmbedder
 
 
 class GuitarEffectsDataset(Dataset):
-	"""PyTorch Dataset reading a CSV manifest with fields: filename,label,params
+    """PyTorch Dataset reading a CSV manifest with fields: filename,label,params
 
-	Args:
-		manifest: path to CSV manifest
-		sr: target sample rate
-		duration: clip duration in seconds
-		feature: 'waveform'|'log-mel'|'hf' — which feature to return
-		hf_model_name: if feature=='hf', the HF model name to use for embeddings
-	"""
+    Args:
+        manifest: path to CSV manifest
+        sr: target sample rate
+        duration: clip duration in seconds
+        feature: 'waveform'|'log-mel'|'hf' — which feature to return
+        hf_model_name: if feature=='hf', the HF model name to use for embeddings
+    """
 
-	def __init__(
-		self,
-		manifest: str,
-		sr: int = config.SAMPLE_RATE,
-		duration: float = config.AUDIO_DURATION,
-		feature: str = "hf",
-		hf_model_name: Optional[str] = None,
-	) -> None:
-		self.df = pd.read_csv(manifest)
-		self.sr = sr
-		self.duration = duration
-		self.feature = feature
-		self.hf = None
-		if feature == "hf":
-			model_name = hf_model_name or config.DEFAULT_HF_MODEL
-			self.hf = HFEmbedder(model_name)
+    def __init__(
+        self,
+        manifest: str,
+        sr: int = config.SAMPLE_RATE,
+        duration: float = config.AUDIO_DURATION,
+        feature: str = "hf",
+        hf_model_name: Optional[str] = None,
+    ) -> None:
+        self.df = pd.read_csv(manifest)
+        self.sr = sr
+        self.duration = duration
+        self.feature = feature
+        self.hf = None
+        if feature == "hf":
+            model_name = hf_model_name or config.DEFAULT_HF_MODEL
+            self.hf = HFEmbedder(model_name)
 
-		# build label mapping
-		labels = sorted(self.df["label"].unique().tolist())
-		self.label2idx = {l: i for i, l in enumerate(labels)}
-		self.idx2label = {i: l for l, i in self.label2idx.items()}
+        # build label mapping
+        labels = sorted(self.df["label"].unique().tolist())
+        self.label2idx = {l: i for i, l in enumerate(labels)}
+        self.idx2label = {i: l for l, i in self.label2idx.items()}
 
-	def __len__(self) -> int:
-		return len(self.df)
+    def __len__(self) -> int:
+        return len(self.df)
 
-	def __getitem__(self, idx: int):
-		row = self.df.iloc[idx]
-		filepath = row["filename"]
-		label = row["label"]
-		load_sr = self.sr
-		if self.feature == "hf" and self.hf is not None:
-			# Avoid double resampling by loading directly at the HF model rate.
-			load_sr = self.hf.sampling_rate
-		wave = load_audio(filepath, sr=load_sr, duration=self.duration)
-		if self.feature == "waveform":
-			return wave, self.label2idx[label]
-		if self.feature == "log-mel":
-			mel = waveform_to_log_mel(wave, sr=self.sr)
-			return mel, self.label2idx[label]
-		if self.feature == "hf":
-			emb = self.hf.extract(wave, sr=load_sr)
-			return emb, self.label2idx[label]
-		raise ValueError(f"Unknown feature type: {self.feature}")
+    def __getitem__(self, idx: int):
+        row = self.df.iloc[idx]
+        filepath = row["filename"]
+        label = row["label"]
+        load_sr = self.sr
+        if self.feature == "hf" and self.hf is not None:
+            # Avoid double resampling by loading directly at the HF model rate.
+            load_sr = self.hf.sampling_rate
+        wave = load_audio(filepath, sr=load_sr, duration=self.duration)
+        if self.feature == "waveform":
+            return wave, self.label2idx[label]
+        if self.feature == "log-mel":
+            mel = waveform_to_log_mel(wave, sr=self.sr)
+            return mel, self.label2idx[label]
+        if self.feature == "hf":
+            emb = self.hf.extract(wave, sr=load_sr)
+            return emb, self.label2idx[label]
+        raise ValueError(f"Unknown feature type: {self.feature}")
 
