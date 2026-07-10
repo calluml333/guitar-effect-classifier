@@ -17,5 +17,5 @@ EFFECT_CLASSES = [
     "reverb",
 ]
 
-DEFAULT_HF_MODEL = "facebook/wav2vec2-base-960h"
+DEFAULT_HF_MODEL = "MIT/ast-finetuned-audioset-10-10-0.4593"
 DEFAULT_FEATURE = "hf"

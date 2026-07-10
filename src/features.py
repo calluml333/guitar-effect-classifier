@@ -13,7 +13,7 @@ class HFEmbedder:
     """Load a Hugging Face audio model and extract fixed-size embeddings.
 
     Example:
-        emb = HFEmbedder("facebook/wav2vec2-base-960h")
+        emb = HFEmbedder("MIT/ast-finetuned-audioset-10-10-0.4593")
         vec = emb.extract(torch_tensor_waveform, sr=16000)
     """
 
@@ -46,7 +46,7 @@ class HFEmbedder:
             wave = waveform.cpu().numpy()
         wave = wave.astype(np.float32, copy=False)
 
-        # Resample to the model's required rate (e.g. 16k for wav2vec2)
+        # Resample to the model's required rate (e.g. 16k for AST)
         if sr != self.sampling_rate:
             wave = librosa.resample(wave, orig_sr=sr, target_sr=self.sampling_rate)
             sr = self.sampling_rate
