@@ -44,8 +44,8 @@ The project is designed as a portfolio-style machine learning workflow with a cl
 - [src/train.py](src/train.py) — training loop, checkpoint saving, and metrics history logging
 - [src/utils.py](src/utils.py) — small helpers shared across scripts (mono downmixing, duration formatting)
 - [data/](data/) — raw/generated audio and manifests (gitignored; regenerate locally)
-- [models/](models/) — trained checkpoints and training history (gitignored; regenerate locally)
-- [outputs/visualizations/](outputs/visualizations/) — default output location for `scripts/evaluate.py`
+- [models/](models/) — trained checkpoints (`*.pth`, committed) and per-run metadata (`*.json`, gitignored)
+- [outputs/visualizations/](outputs/visualizations/) — default output location for `scripts/evaluate.py` (gitignored)
 - [notebooks/](notebooks/) — reserved for exploratory analysis (currently empty)
 - [tests/](tests/) — test suite covering preprocessing, dataset loading, DSP effects, training, inference, and evaluation
 
@@ -99,6 +99,23 @@ This will:
 - copy them into [data/raw/idmt_smt_guitar](data/raw/idmt_smt_guitar)
 - write a local manifest at [data/raw/idmt_smt_guitar/manifest.csv](data/raw/idmt_smt_guitar/manifest.csv)
 
+**Arguments:**
+
+| Flag | Default | Description |
+|---|---|---|
+| `--record-id` | `7544110` | Zenodo record ID for the IDMT-SMT-Guitar dataset |
+| `--download-dir` | `data/downloads/idmt_smt_guitar` | Where downloaded archives are saved |
+| `--output-dir` | `data/raw/idmt_smt_guitar` | Where selected WAV files are copied |
+| `--dataset-ids` | `2,3,4` | Comma-separated IDMT dataset subsets to include |
+| `--sample-rate` | `44100` | Expected sample rate, used for verification when copying |
+| `--bit-depth` | `16` | Expected bit depth (`16`/`24`/`32`), used for verification when copying |
+| `--source-archive` | none | Path to a local zip/tar.gz archive instead of downloading from Zenodo |
+| `--manifest` | none | Path to a previously-written discovery manifest CSV to read instead of re-scanning archives |
+| `--write-manifest` | none | Path to write a discovery manifest CSV of candidate files, for curation before copying |
+| `--skip-verify` | off | Skip sample rate / bit depth verification when copying files |
+| `--dry-run` | off | Print what would happen without downloading or copying anything |
+| `--force-download` | off | Re-download archives even if they already exist locally |
+
 ## Generate synthetic data
 
 Place clean guitar audio files under [data/raw](data/raw), then run:
@@ -113,6 +130,18 @@ poetry run python scripts/generate_dataset.py \
 This will create processed audio files and a manifest CSV containing labels and effect parameters. Effect parameters are randomized per file (see `random_params_for` in the script); pass `--seed` (default `config.RANDOM_SEED`) to reproduce an identical dataset across runs.
 
 Before writing anything, it prints an estimated output file count and disk size and asks for confirmation (based on each input file's duration, so it's cheap even for large inputs). Pass `--yes`/`-y` to skip the prompt for non-interactive use.
+
+**Arguments:**
+
+| Flag | Default | Description |
+|---|---|---|
+| `--input-dir` | `data/raw` | Directory of clean source WAV files to process |
+| `--out-dir` | `data/generated` | Directory to write generated (effect-processed) WAV files |
+| `--manifest` | `data/manifest.csv` | Path to write the output manifest CSV (filename/label/params) |
+| `--sr` | `config.SAMPLE_RATE` (`32000`) | Sample rate for generated output audio |
+| `--samples-per-input` | `1` | How many randomized-parameter variants to generate per input file, per effect |
+| `--seed` | `config.RANDOM_SEED` (`42`) | Random seed, for reproducing an identical dataset across runs |
+| `-y`, `--yes` | off | Skip the size-estimate confirmation prompt |
 
 ## Train the model
 
@@ -132,6 +161,25 @@ Runs are seeded (`--seed`, default `config.RANDOM_SEED`) for reproducible train/
 
 A checkpoint is saved to `--out-dir` as `best.pth` whenever validation accuracy improves, alongside `training_history.json` (per-epoch loss/accuracy/precision/recall/F1) and `confusion_matrix.json` (the best epoch's validation confusion matrix) — both consumed by `scripts/evaluate.py` below.
 
+**Arguments:**
+
+| Flag | Default | Description |
+|---|---|---|
+| `--manifest` | `data/manifest.csv` | Manifest CSV to train on |
+| `--feature` | `config.DEFAULT_FEATURE` (`hf`) | Feature type: `hf`, `log-mel`, or `waveform` |
+| `--hf-model` | `config.DEFAULT_MODEL` | Hugging Face model to use when `--feature hf` |
+| `--sr` | `config.SAMPLE_RATE` (`32000`) | Sample rate to load audio at |
+| `--duration` | `config.AUDIO_DURATION` (`3.0`) | Clip duration in seconds (trim/pad) |
+| `--epochs` | `5` | Number of training epochs |
+| `--batch-size` | `16` | Batch size for both train and validation loaders |
+| `--lr` | `1e-3` | Adam learning rate |
+| `--val-split` | `0.1` | Fraction of the dataset held out for validation |
+| `--out-dir` | `models` | Directory to write `best.pth`, `training_history.json`, `confusion_matrix.json` |
+| `--hidden-dim` | `config.CLASSIFIER_HIDDEN_DIM` (`512`) | Classifier hidden layer size |
+| `--dropout` | `config.CLASSIFIER_DROPOUT` (`0.3`) | Classifier dropout probability |
+| `--seed` | `config.RANDOM_SEED` (`42`) | Random seed for reproducible split/init/training |
+| `--no-cuda` | off | Force CPU even if CUDA is available |
+
 ## Run inference
 
 Predict an effect from a single audio file. `--feature`/`--hf-model` are optional — they default to whatever the checkpoint was trained with:
@@ -141,6 +189,19 @@ poetry run python scripts/predict.py \
   --audio path/to/audio.wav \
   --checkpoint models/best.pth
 ```
+
+**Arguments:**
+
+| Flag | Default | Description |
+|---|---|---|
+| `--audio` | *(required)* | Path to the input audio file |
+| `--checkpoint` | *(required)* | Path to a saved model checkpoint |
+| `--feature` | checkpoint's recorded feature, else `config.DEFAULT_FEATURE` | Feature type: `hf`, `log-mel`, or `waveform` — overrides auto-detection |
+| `--hf-model` | checkpoint's recorded model, else `config.DEFAULT_MODEL` | Hugging Face model to use when the feature is `hf` |
+| `--sr` | `config.SAMPLE_RATE` (`32000`) | Sample rate to load audio at |
+| `--duration` | `config.AUDIO_DURATION` (`3.0`) | Clip duration in seconds (trim/pad) |
+| `--topk` | `3` | Number of top predictions to display |
+| `--use-cuda` | off | Use CUDA if available |
 
 ## Evaluate the model
 
@@ -158,6 +219,21 @@ This writes to `outputs/visualizations/` (override with `--out-dir`):
 - `predictions.csv` — per-file true/predicted label, confidence, and top-k breakdown (only when `--manifest` is given)
 
 It also prints overall accuracy and a handful of correct/incorrect example predictions to the console.
+
+**Arguments:**
+
+| Flag | Default | Description |
+|---|---|---|
+| `--checkpoint` | `models/best.pth` | Path to the trained checkpoint to evaluate |
+| `--manifest` | none | Recompute the confusion matrix and `predictions.csv` over this manifest CSV |
+| `--history` | `training_history.json` next to `--checkpoint` | Path to the training history JSON used for the loss/accuracy curves |
+| `--confusion-matrix` | `confusion_matrix.json` next to `--checkpoint` | Fallback confusion matrix source when `--manifest` isn't given |
+| `--out-dir` | `outputs/visualizations` | Directory to write plots and `predictions.csv` |
+| `--sr` | `config.SAMPLE_RATE` (`32000`) | Sample rate to load audio at |
+| `--duration` | `config.AUDIO_DURATION` (`3.0`) | Clip duration in seconds (trim/pad) |
+| `--topk` | `3` | Number of top predictions recorded per file in `predictions.csv` |
+| `--num-examples` | `5` | Number of correct/incorrect example predictions to print to the console |
+| `--use-cuda` | off | Use CUDA if available |
 
 ## Run the Streamlit demo
 
@@ -179,7 +255,7 @@ poetry run pytest -q
 
 - The current implementation focuses on a lightweight and reproducible training pipeline rather than a fully tuned production model.
 - The demo app expects a checkpoint at [models/best.pth](models/best.pth) by default, so update the path if you save checkpoints elsewhere.
-- Trained checkpoints (`models/*.pth`) are gitignored, not committed — they're regenerable build output. Run `python -m src.train` to produce one locally.
+- Trained checkpoints (`models/*.pth`) are committed to version control; per-run metadata (`models/*.json` — `training_history.json`, `confusion_matrix.json`) and evaluation outputs (`outputs/*`) are gitignored as regenerable artifacts.
 - The repository currently targets Python 3.11 for the devcontainer and Poetry environment.
 
 ## Future improvements
