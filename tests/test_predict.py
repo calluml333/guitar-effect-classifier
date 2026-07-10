@@ -28,7 +28,7 @@ def test_resolve_feature_settings_falls_back_to_config_defaults_for_old_checkpoi
     checkpoint = {}  # no "feature"/"hf_model_name" keys, e.g. a pre-existing checkpoint
     feature, hf_model = resolve_feature_settings(checkpoint)
     assert feature == config.DEFAULT_FEATURE
-    assert hf_model == config.DEFAULT_HF_MODEL
+    assert hf_model == config.DEFAULT_MODEL
 
 
 def _make_sine_wav(path: Path, sr: int = 16000, duration: float = 1.0) -> None:

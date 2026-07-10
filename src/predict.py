@@ -38,7 +38,7 @@ def resolve_feature_settings(
     then whatever the checkpoint was trained with, then the project defaults.
     """
     resolved_feature = feature or checkpoint.get("feature") or config.DEFAULT_FEATURE
-    resolved_hf_model = hf_model_name or checkpoint.get("hf_model_name") or config.DEFAULT_HF_MODEL
+    resolved_hf_model = hf_model_name or checkpoint.get("hf_model_name") or config.DEFAULT_MODEL
     return resolved_feature, resolved_hf_model
 
 
@@ -46,7 +46,7 @@ def extract_feature(
     wave: torch.Tensor,
     sr: int,
     feature: str = config.DEFAULT_FEATURE,
-    hf_model_name: str = config.DEFAULT_HF_MODEL,
+    hf_model_name: str = config.DEFAULT_MODEL,
     embedder: Optional[HFEmbedder] = None,
 ) -> torch.Tensor:
     """Extract the given feature type from a waveform.

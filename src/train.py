@@ -150,7 +150,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--manifest", type=str, default="data/manifest.csv")
     parser.add_argument("--feature", type=str, default=config.DEFAULT_FEATURE, choices=["hf", "log-mel", "waveform"])
-    parser.add_argument("--hf-model", type=str, default=config.DEFAULT_HF_MODEL)
+    parser.add_argument("--hf-model", type=str, default=config.DEFAULT_MODEL)
     parser.add_argument("--sr", type=int, default=config.SAMPLE_RATE)
     parser.add_argument("--duration", type=float, default=config.AUDIO_DURATION)
     parser.add_argument("--epochs", type=int, default=5)

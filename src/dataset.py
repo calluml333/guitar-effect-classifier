@@ -42,7 +42,7 @@ class GuitarEffectsDataset(Dataset):
         self.feature = feature
         self.hf = None
         if feature == "hf":
-            model_name = hf_model_name or config.DEFAULT_HF_MODEL
+            model_name = hf_model_name or config.DEFAULT_MODEL
             self.hf = HFEmbedder(model_name)
 
         # build label mapping
