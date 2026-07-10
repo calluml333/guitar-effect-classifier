@@ -225,5 +225,8 @@ data/generated/*
 data/manifest.csv
 
 # Trained model checkpoints (regenerate locally with `python -m src.train`)
-models/*.pth
+models/*.json
 models/checkpoints/
+
+# Outputs and logs
+outputs/*
