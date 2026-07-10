@@ -10,6 +10,7 @@ import random
 import sys
 import time
 from pathlib import Path
+from typing import Callable, Optional
 
 # Ensure the repository root is on sys.path so `from src...` imports work
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -44,7 +45,13 @@ def random_params_for(effect: str):
     return {}
 
 
-def process_file(path: Path, out_dir: Path, sr: int, samples_per_input: int = 1):
+def process_file(
+    path: Path,
+    out_dir: Path,
+    sr: int,
+    samples_per_input: int = 1,
+    on_file_written: Optional[Callable[[], None]] = None,
+):
     wave_np, orig_sr = sf.read(str(path))
     wave_np = ensure_mono(np.asarray(wave_np))
     if orig_sr != sr:
@@ -65,6 +72,8 @@ def process_file(path: Path, out_dir: Path, sr: int, samples_per_input: int = 1)
             except Exception:
                 rel_name = str(out_path)
             results.append({"filename": rel_name, "label": effect, "params": json.dumps(params)})
+            if on_file_written is not None:
+                on_file_written()
     return results
 
 
@@ -81,23 +90,32 @@ def main(args):
         print(f"No WAV files found in {input_dir}. Place clean guitar WAVs there.")
         return
     total_files = len(files)
+    generated_files = total_files * len(EFFECTS) * args.samples_per_input
     started = time.perf_counter()
+    written = 0
 
-    for idx, p in enumerate(files, start=1):
-        rows.extend(process_file(p, out_dir, sr=args.sr, samples_per_input=args.samples_per_input))
-
+    def report_progress() -> None:
+        nonlocal written
+        written += 1
         elapsed = max(time.perf_counter() - started, 1e-6)
-        rate = idx / elapsed
-        eta = (total_files - idx) / rate if rate > 0 else 0.0
-        progress = idx / total_files
+        rate = written / elapsed
+        eta = (generated_files - written) / rate if rate > 0 else 0.0
+        progress = written / generated_files
         bar_width = 24
         filled = int(progress * bar_width)
         bar = "#" * filled + "-" * (bar_width - filled)
         print(
-            f"\rGenerating: [{bar}] {idx}/{total_files} ({progress * 100:5.1f}%) "
+            f"\rGenerating: [{bar}] {written}/{generated_files} ({progress * 100:5.1f}%) "
             f"Elapsed {format_duration(elapsed)} ETA {format_duration(eta)}",
             end="",
             flush=True,
+        )
+
+    for p in files:
+        rows.extend(
+            process_file(
+                p, out_dir, sr=args.sr, samples_per_input=args.samples_per_input, on_file_written=report_progress
+            )
         )
     print()
 
@@ -108,7 +126,6 @@ def main(args):
         for r in rows:
             writer.writerow(r)
     total_elapsed = time.perf_counter() - started
-    generated_files = total_files * len(EFFECTS) * args.samples_per_input
     avg_files_per_sec = generated_files / total_elapsed if total_elapsed > 0 else 0.0
     print(f"Wrote manifest with {len(rows)} rows to {manifest_path}")
     print(
