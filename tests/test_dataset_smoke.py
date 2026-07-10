@@ -60,6 +60,22 @@ def test_build_classifier_from_dataset_sample_infers_input_dim():
     assert isinstance(model, EffectClassifier)
 
 
+def test_build_classifier_from_dataset_sample_uses_config_defaults():
+    from src import config
+
+    sample = torch.randn(16)
+    model = build_classifier_from_dataset_sample(sample, n_classes=7)
+    assert model.net[0].out_features == config.CLASSIFIER_HIDDEN_DIM
+    assert model.net[2].p == config.CLASSIFIER_DROPOUT
+
+
+def test_build_classifier_from_dataset_sample_honors_overrides():
+    sample = torch.randn(16)
+    model = build_classifier_from_dataset_sample(sample, n_classes=7, hidden_dim=64, dropout=0.1)
+    assert model.net[0].out_features == 64
+    assert model.net[2].p == 0.1
+
+
 def test_format_predictions_formats_scores():
     predictions = [("clean", 0.5), ("distortion", 0.25)]
     text = format_predictions(predictions)

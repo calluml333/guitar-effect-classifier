@@ -69,6 +69,8 @@ def process_file(path: Path, out_dir: Path, sr: int, samples_per_input: int = 1)
 
 
 def main(args):
+    random.seed(args.seed)
+    np.random.seed(args.seed)
     input_dir = Path(args.input_dir)
     out_dir = Path(args.out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -123,5 +125,6 @@ if __name__ == "__main__":
     parser.add_argument("--manifest", type=str, default="data/manifest.csv")
     parser.add_argument("--sr", type=int, default=config.SAMPLE_RATE)
     parser.add_argument("--samples-per-input", type=int, default=1, help="How many generated variants per input per effect")
+    parser.add_argument("--seed", type=int, default=config.RANDOM_SEED)
     args = parser.parse_args()
     main(args)

@@ -8,6 +8,8 @@ from typing import Optional
 import torch
 import torch.nn as nn
 
+from src import config
+
 
 class EffectClassifier(nn.Module):
     """Simple classifier head.
@@ -19,7 +21,13 @@ class EffectClassifier(nn.Module):
         dropout: dropout probability
     """
 
-    def __init__(self, input_dim: int, n_classes: int = 7, hidden_dim: int = 512, dropout: float = 0.3):
+    def __init__(
+        self,
+        input_dim: int,
+        n_classes: int = 7,
+        hidden_dim: int = config.CLASSIFIER_HIDDEN_DIM,
+        dropout: float = config.CLASSIFIER_DROPOUT,
+    ):
         super().__init__()
         self.net = nn.Sequential(
             nn.Linear(input_dim, hidden_dim),
@@ -35,7 +43,12 @@ class EffectClassifier(nn.Module):
         return self.net(x)
 
 
-def build_classifier_from_dataset_sample(sample_tensor: torch.Tensor, n_classes: int = 7) -> nn.Module:
+def build_classifier_from_dataset_sample(
+    sample_tensor: torch.Tensor,
+    n_classes: int = 7,
+    hidden_dim: int = config.CLASSIFIER_HIDDEN_DIM,
+    dropout: float = config.CLASSIFIER_DROPOUT,
+) -> nn.Module:
     """Helper to instantiate classifier with input dim inferred from a sample.
 
     If sample is a spectrogram (2D), flatten it.
@@ -44,5 +57,5 @@ def build_classifier_from_dataset_sample(sample_tensor: torch.Tensor, n_classes:
         input_dim = sample_tensor.numel()
     else:
         input_dim = sample_tensor.shape[0]
-    return EffectClassifier(input_dim=input_dim, n_classes=n_classes)
+    return EffectClassifier(input_dim=input_dim, n_classes=n_classes, hidden_dim=hidden_dim, dropout=dropout)
 

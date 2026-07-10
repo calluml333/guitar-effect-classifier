@@ -1,10 +1,12 @@
 """Tests for the training/validation loop in src/train.py."""
+import random
+
 import numpy as np
 import torch
 from torch.utils.data import DataLoader, Dataset
 
 from src.model import EffectClassifier
-from src.train import collate_fn, train_one_epoch, validate
+from src.train import collate_fn, set_seed, train_one_epoch, validate
 
 N_CLASSES = 3
 INPUT_DIM = 4
@@ -101,6 +103,29 @@ def test_validate_confusion_matrix_is_full_size_even_when_a_class_is_absent():
     _, _, _, _, _, cm = validate(model, loader, loss_fn, torch.device("cpu"), n_classes=N_CLASSES)
 
     assert cm.shape == (N_CLASSES, N_CLASSES)
+
+
+def test_set_seed_makes_random_numpy_and_torch_reproducible():
+    set_seed(123)
+    a = (random.random(), np.random.rand(), torch.randn(3))
+
+    set_seed(123)
+    b = (random.random(), np.random.rand(), torch.randn(3))
+
+    assert a[0] == b[0]
+    assert a[1] == b[1]
+    assert torch.equal(a[2], b[2])
+
+
+def test_set_seed_makes_model_init_reproducible():
+    set_seed(42)
+    model_a = EffectClassifier(input_dim=INPUT_DIM, n_classes=N_CLASSES, hidden_dim=8)
+
+    set_seed(42)
+    model_b = EffectClassifier(input_dim=INPUT_DIM, n_classes=N_CLASSES, hidden_dim=8)
+
+    for p_a, p_b in zip(model_a.parameters(), model_b.parameters()):
+        assert torch.equal(p_a, p_b)
 
 
 def test_training_reduces_loss_over_multiple_epochs():

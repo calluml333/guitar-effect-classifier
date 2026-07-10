@@ -5,6 +5,7 @@ Usage:
 """
 import argparse
 import json
+import random
 import time
 from pathlib import Path
 from typing import Tuple
@@ -22,6 +23,15 @@ from torch.utils.data import DataLoader
 from src import config
 from src.dataset import GuitarEffectsDataset
 from src.model import build_classifier_from_dataset_sample
+
+
+def set_seed(seed: int) -> None:
+    """Seed Python/NumPy/PyTorch RNGs for reproducible splits and training."""
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed_all(seed)
 
 
 def collate_fn(batch):
@@ -83,6 +93,7 @@ def validate(model, loader, loss_fn, device, n_classes: int = None):
 
 
 def main(args):
+    set_seed(args.seed)
     manifest = args.manifest
     device = torch.device("cuda" if torch.cuda.is_available() and not args.no_cuda else "cpu")
     dataset = GuitarEffectsDataset(manifest, sr=args.sr, duration=args.duration, feature=args.feature, hf_model_name=args.hf_model)
@@ -99,7 +110,9 @@ def main(args):
     # get sample to infer model size
     sample_x, _ = dataset[0]
     n_classes = len(dataset.label2idx)
-    model = build_classifier_from_dataset_sample(sample_x, n_classes=n_classes)
+    model = build_classifier_from_dataset_sample(
+        sample_x, n_classes=n_classes, hidden_dim=args.hidden_dim, dropout=args.dropout
+    )
     model.to(device)
     train_loader = DataLoader(train_ds, batch_size=args.batch_size, shuffle=True, collate_fn=collate_fn)
     val_loader = DataLoader(val_ds, batch_size=args.batch_size, shuffle=False, collate_fn=collate_fn)
@@ -158,6 +171,9 @@ if __name__ == "__main__":
     parser.add_argument("--lr", type=float, default=1e-3)
     parser.add_argument("--val-split", type=float, default=0.1)
     parser.add_argument("--out-dir", type=str, default="models")
+    parser.add_argument("--hidden-dim", type=int, default=config.CLASSIFIER_HIDDEN_DIM)
+    parser.add_argument("--dropout", type=float, default=config.CLASSIFIER_DROPOUT)
+    parser.add_argument("--seed", type=int, default=config.RANDOM_SEED)
     parser.add_argument("--no-cuda", action="store_true")
     args = parser.parse_args()
     main(args)

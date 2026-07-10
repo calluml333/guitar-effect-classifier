@@ -110,7 +110,7 @@ poetry run python scripts/generate_dataset.py \
   --manifest data/manifest.csv
 ```
 
-This will create processed audio files and a manifest CSV containing labels and effect parameters.
+This will create processed audio files and a manifest CSV containing labels and effect parameters. Effect parameters are randomized per file (see `random_params_for` in the script); pass `--seed` (default `config.RANDOM_SEED`) to reproduce an identical dataset across runs.
 
 ## Train the model
 
@@ -125,6 +125,8 @@ poetry run python -m src.train \
 ```
 
 The default `--feature hf` extracts embeddings from [`MIT/ast-finetuned-audioset-10-10-0.4593`](https://huggingface.co/MIT/ast-finetuned-audioset-10-10-0.4593) (Audio Spectrogram Transformer, pretrained on AudioSet) — chosen over a speech model since it's pretrained on general, non-speech audio events, which better matches classifying guitar timbre. `--feature log-mel`/`--feature waveform` are also available (see [src/config.py](src/config.py) and `--help` for other options).
+
+Runs are seeded (`--seed`, default `config.RANDOM_SEED`) for reproducible train/val splits and model initialization, and the classifier's `--hidden-dim`/`--dropout` are also configurable rather than fixed in code. Both default to values in [src/config.py](src/config.py).
 
 A checkpoint is saved to `--out-dir` as `best.pth` whenever validation accuracy improves, alongside `training_history.json` (per-epoch loss/accuracy/precision/recall/F1) and `confusion_matrix.json` (the best epoch's validation confusion matrix) — both consumed by `scripts/evaluate.py` below.
 
