@@ -8,8 +8,7 @@ if str(ROOT) not in sys.path:
 
 import streamlit as st
 
-from src import config
-from src.predict import format_predictions, predict_audio
+from src.predict import format_predictions, load_checkpoint, predict_audio
 
 st.set_page_config(page_title="Guitar Effect Classifier", layout="wide")
 
@@ -21,7 +20,21 @@ st.markdown(
 uploaded_file = st.file_uploader("Upload WAV audio", type=["wav", "mp3", "flac"])
 
 checkpoint = st.text_input("Checkpoint path", value="models/best.pth")
-feature = st.selectbox("Feature type", ["hf", "log-mel", "waveform"], index=0)
+
+FEATURE_OPTIONS = ["hf", "log-mel", "waveform"]
+detected_feature = None
+if Path(checkpoint).exists():
+    try:
+        detected_feature = load_checkpoint(checkpoint).get("feature")
+    except Exception:
+        detected_feature = None
+
+default_index = FEATURE_OPTIONS.index(detected_feature) if detected_feature in FEATURE_OPTIONS else 0
+feature = st.selectbox("Feature type", FEATURE_OPTIONS, index=default_index)
+if detected_feature:
+    st.caption(f"Auto-detected from checkpoint: '{detected_feature}'")
+elif Path(checkpoint).exists():
+    st.caption("Checkpoint doesn't record a feature type (older checkpoint) — select manually.")
 
 if uploaded_file is not None:
     st.audio(uploaded_file, format="audio/wav")
@@ -37,9 +50,6 @@ if uploaded_file is not None:
                     audio_path=tmp_path,
                     checkpoint_path=checkpoint,
                     feature=feature,
-                    hf_model_name=config.DEFAULT_HF_MODEL,
-                    sr=config.SAMPLE_RATE,
-                    duration=config.AUDIO_DURATION,
                     topk=5,
                     use_cuda=False,
                 )

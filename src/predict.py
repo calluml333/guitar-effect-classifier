@@ -31,7 +31,18 @@ def build_model_from_feature(feature_tensor: torch.Tensor, n_classes: int, devic
     return model
 
 
-def extract_feature(wave: torch.Tensor, sr: int, feature: str = "hf", hf_model_name: str = config.DEFAULT_HF_MODEL) -> torch.Tensor:
+def resolve_feature_settings(
+    checkpoint: Dict, feature: Optional[str] = None, hf_model_name: Optional[str] = None
+) -> Tuple[str, str]:
+    """Resolve the feature type/HF model to use, preferring explicit overrides,
+    then whatever the checkpoint was trained with, then the project defaults.
+    """
+    resolved_feature = feature or checkpoint.get("feature") or config.DEFAULT_FEATURE
+    resolved_hf_model = hf_model_name or checkpoint.get("hf_model_name") or config.DEFAULT_HF_MODEL
+    return resolved_feature, resolved_hf_model
+
+
+def extract_feature(wave: torch.Tensor, sr: int, feature: str = config.DEFAULT_FEATURE, hf_model_name: str = config.DEFAULT_HF_MODEL) -> torch.Tensor:
     if feature == "waveform":
         return wave
     if feature == "log-mel":
@@ -45,19 +56,25 @@ def extract_feature(wave: torch.Tensor, sr: int, feature: str = "hf", hf_model_n
 def predict_audio(
     audio_path: str,
     checkpoint_path: str,
-    feature: str = "hf",
-    hf_model_name: str = config.DEFAULT_HF_MODEL,
+    feature: Optional[str] = None,
+    hf_model_name: Optional[str] = None,
     sr: int = config.SAMPLE_RATE,
     duration: float = config.AUDIO_DURATION,
     topk: int = 3,
     use_cuda: bool = False,
 ) -> List[Tuple[str, float]]:
+    """Run inference on an audio file.
+
+    `feature`/`hf_model_name` default to whatever the checkpoint was trained
+    with (see `resolve_feature_settings`); pass them explicitly to override.
+    """
     device = torch.device("cuda" if torch.cuda.is_available() and use_cuda else "cpu")
     checkpoint = load_checkpoint(checkpoint_path, device=device)
     label2idx = checkpoint["label2idx"]
     idx2label = {int(idx): label for label, idx in label2idx.items()}
+    resolved_feature, resolved_hf_model = resolve_feature_settings(checkpoint, feature, hf_model_name)
     wave = load_audio(audio_path, sr=sr, duration=duration)
-    feature_tensor = extract_feature(wave, sr, feature=feature, hf_model_name=hf_model_name)
+    feature_tensor = extract_feature(wave, sr, feature=resolved_feature, hf_model_name=resolved_hf_model)
     flat = feature_tensor.flatten().unsqueeze(0).to(device)
     model = build_model_from_feature(feature_tensor, n_classes=len(label2idx), device=device)
     model.load_state_dict(checkpoint["model_state"])

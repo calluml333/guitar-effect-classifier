@@ -18,3 +18,4 @@ EFFECT_CLASSES = [
 ]
 
 DEFAULT_HF_MODEL = "facebook/wav2vec2-base-960h"
+DEFAULT_FEATURE = "hf"

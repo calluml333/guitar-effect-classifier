@@ -109,14 +109,21 @@ def main(args):
         print(f"Epoch {epoch}/{args.epochs} - {dt:.1f}s - train_loss={train_loss:.4f} train_acc={train_acc:.4f} val_acc={val_acc:.4f} f1={f1:.4f}")
         if val_acc > best_val_acc:
             best_val_acc = val_acc
-            torch.save({"model_state": model.state_dict(), "label2idx": dataset.label2idx}, out_dir / "best.pth")
+            checkpoint = {
+                "model_state": model.state_dict(),
+                "label2idx": dataset.label2idx,
+                "feature": args.feature,
+            }
+            if args.feature == "hf":
+                checkpoint["hf_model_name"] = args.hf_model
+            torch.save(checkpoint, out_dir / "best.pth")
     print("Training complete. Best val acc:", best_val_acc)
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--manifest", type=str, default="data/manifest.csv")
-    parser.add_argument("--feature", type=str, default="hf", choices=["hf", "log-mel", "waveform"])
+    parser.add_argument("--feature", type=str, default=config.DEFAULT_FEATURE, choices=["hf", "log-mel", "waveform"])
     parser.add_argument("--hf-model", type=str, default=config.DEFAULT_HF_MODEL)
     parser.add_argument("--sr", type=int, default=config.SAMPLE_RATE)
     parser.add_argument("--duration", type=float, default=config.AUDIO_DURATION)
