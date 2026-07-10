@@ -1,14 +1,15 @@
 #!/usr/bin/env python3
-"""Download, extract, and prepare the IDMT-SMT-Guitar dataset for local use.
+"""
+Download, extract, and prepare the IDMT-SMT-Guitar dataset for local use.
 
-The script is designed to keep all downloaded and processed data out of version
-control. By default it writes to:
+The script is designed to keep all downloaded and processed data out of
+version control. By default it writes to:
 
 - data/downloads/idmt_smt_guitar/   (raw downloaded archives)
 - data/raw/idmt_smt_guitar/        (selected WAV files for local training)
 
-It can download the Zenodo record directly, or use a local archive path if one
-already exists.
+It can download the Zenodo record directly, or use a local archive path
+if one already exists.
 """
 from __future__ import annotations
 
@@ -28,19 +29,19 @@ DEFAULT_RECORD_ID = "7544110"
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Install the IDMT-SMT-Guitar dataset locally")
-    parser.add_argument("--record-id", default=DEFAULT_RECORD_ID, help="Zenodo record ID")
-    parser.add_argument("--download-dir", default=str(DEFAULT_DOWNLOAD_DIR), help="Directory for downloaded archives")
-    parser.add_argument("--output-dir", default=str(DEFAULT_OUTPUT_DIR), help="Directory for selected WAV files")
-    parser.add_argument("--dataset-ids", default="2,3,4", help="Comma-separated dataset IDs to include (e.g. 2,3,4)")
-    parser.add_argument("--sample-rate", type=int, default=44100, help="Target sample rate")
-    parser.add_argument("--bit-depth", type=int, default=16, choices=[16, 24, 32], help="Target bit depth")
-    parser.add_argument("--source-archive", default=None, help="Path to an existing local zip/tar.gz archive")
-    parser.add_argument("--manifest", default=None, help="Path to a CSV manifest to read (skip discovery)")
-    parser.add_argument("--write-manifest", default=None, help="Path to write a CSV manifest of discovered candidates")
-    parser.add_argument("--skip-verify", action="store_true", help="Skip sample rate / bit depth verification when copying")
-    parser.add_argument("--dry-run", action="store_true", help="Show what would happen without downloading or copying files")
-    parser.add_argument("--force-download", action="store_true", help="Re-download archives even if they already exist")
+    parser = argparse.ArgumentParser(description="Install the IDMT-SMT-Guitar dataset locally")  # noqa: E501
+    parser.add_argument("--record-id", default=DEFAULT_RECORD_ID, help="Zenodo record ID")  # noqa: E501
+    parser.add_argument("--download-dir", default=str(DEFAULT_DOWNLOAD_DIR), help="Directory for downloaded archives")  # noqa: E501
+    parser.add_argument("--output-dir", default=str(DEFAULT_OUTPUT_DIR), help="Directory for selected WAV files")  # noqa: E501
+    parser.add_argument("--dataset-ids", default="2,3,4", help="Comma-separated dataset IDs to include (e.g. 2,3,4)")  # noqa: E501
+    parser.add_argument("--sample-rate", type=int, default=44100, help="Target sample rate")  # noqa: E501
+    parser.add_argument("--bit-depth", type=int, default=16, choices=[16, 24, 32], help="Target bit depth")  # noqa: E501
+    parser.add_argument("--source-archive", default=None, help="Path to an existing local zip/tar.gz archive")  # noqa: E501
+    parser.add_argument("--manifest", default=None, help="Path to a CSV manifest to read (skip discovery)")  # noqa: E501
+    parser.add_argument("--write-manifest", default=None, help="Path to write a CSV manifest of discovered candidates")  # noqa: E501
+    parser.add_argument("--skip-verify", action="store_true", help="Skip sample rate / bit depth verification when copying")  # noqa: E501
+    parser.add_argument("--dry-run", action="store_true", help="Show what would happen without downloading or copying files")  # noqa: E501
+    parser.add_argument("--force-download", action="store_true", help="Re-download archives even if they already exist")  # noqa: E501
     return parser.parse_args()
 
 
@@ -68,30 +69,39 @@ def main() -> None:
             raise FileNotFoundError(f"Archive not found: {archive_path}")
         archives = [archive_path]
     else:
-        archives = fetch.download_record_archives(args.record_id, download_dir, args.force_download)
+        archives = fetch.download_record_archives(
+            args.record_id,
+            download_dir,
+            args.force_download
+        )
 
     extracted_roots: List[Path] = []
     for archive_path in archives:
         extracted_root = download_dir / archive_path.stem
-        # If the extracted folder already exists and contains files, skip re-extraction
-        if extracted_root.exists() and extracted_root.is_dir() and any(extracted_root.iterdir()):
-            print(f"Skipping extraction; files already present in {extracted_root}")
+        # If the extracted folder already exists and contains files,
+        # skip re-extraction
+        if extracted_root.exists() and extracted_root.is_dir() and any(extracted_root.iterdir()):  # noqa: E501
+            print(f"Skipping extraction; files already present in {extracted_root}")  # noqa: E501
             extracted_roots.append(extracted_root)
             continue
         if not archive_path.exists():
             print(f"Archive file not found, skipping: {archive_path}")
             continue
-        extracted_roots.append(fetch.extract_archive(archive_path, extracted_root))
+        extracted_roots.append(fetch.extract_archive(archive_path, extracted_root))  # noqa: E501
 
     if args.manifest:
-        candidates = manifest.read_candidates_manifest(Path(args.manifest), extracted_roots)
+        candidates = manifest.read_candidates_manifest(Path(args.manifest), extracted_roots)  # noqa: E501
     else:
         candidates = []
         for extracted_root in extracted_roots:
             # No manifest provided -> include all correctly formatted WAV files
             candidates.extend(
                 discovery.select_audio_files(
-                    extracted_root, dataset_ids, args.sample_rate, args.bit_depth, include_all=True
+                    extracted_root,
+                    dataset_ids,
+                    args.sample_rate,
+                    args.bit_depth,
+                    include_all=True
                 )
             )
 
@@ -100,7 +110,11 @@ def main() -> None:
         manifest.write_discovery_manifest(out_manifest, candidates)
         print(f"Wrote discovery manifest: {out_manifest}")
 
-    copied_files = manifest.copy_selected_files(candidates, output_dir, skip_verify=args.skip_verify) if candidates else []
+    copied_files = manifest.copy_selected_files(
+        candidates,
+        output_dir,
+        skip_verify=args.skip_verify
+    ) if candidates else []
     manifest.write_manifest(output_dir, copied_files)
 
     print(f"Prepared {len(copied_files)} WAV files in {output_dir}")
