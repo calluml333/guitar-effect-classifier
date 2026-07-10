@@ -4,6 +4,7 @@ Usage:
     python -m src.train --manifest data/manifest.csv --feature hf --epochs 10
 """
 import argparse
+import json
 import time
 from pathlib import Path
 from typing import Tuple
@@ -55,7 +56,12 @@ def train_one_epoch(model, loader, opt, loss_fn, device):
     return np.mean(losses), acc
 
 
-def validate(model, loader, loss_fn, device):
+def validate(model, loader, loss_fn, device, n_classes: int = None):
+    """Run validation. `n_classes` fixes the label set used for precision/
+    recall/confusion-matrix so their shape/order is stable across calls even
+    if a given batch doesn't contain every class (otherwise sklearn infers
+    the label set from whatever classes happen to appear).
+    """
     model.eval()
     losses = []
     preds = []
@@ -69,9 +75,10 @@ def validate(model, loader, loss_fn, device):
             losses.append(loss.item())
             preds.extend(torch.argmax(logits, dim=1).cpu().numpy().tolist())
             targets.extend(y.cpu().numpy().tolist())
+    labels = list(range(n_classes)) if n_classes is not None else None
     acc = accuracy_score(targets, preds)
-    prec, rec, f1, _ = precision_recall_fscore_support(targets, preds, average="macro", zero_division=0)
-    cm = confusion_matrix(targets, preds)
+    prec, rec, f1, _ = precision_recall_fscore_support(targets, preds, average="macro", zero_division=0, labels=labels)
+    cm = confusion_matrix(targets, preds, labels=labels)
     return np.mean(losses), acc, prec, rec, f1, cm
 
 
@@ -91,7 +98,8 @@ def main(args):
     val_ds = Subset(dataset, val_idx)
     # get sample to infer model size
     sample_x, _ = dataset[0]
-    model = build_classifier_from_dataset_sample(sample_x, n_classes=len(dataset.label2idx))
+    n_classes = len(dataset.label2idx)
+    model = build_classifier_from_dataset_sample(sample_x, n_classes=n_classes)
     model.to(device)
     train_loader = DataLoader(train_ds, batch_size=args.batch_size, shuffle=True, collate_fn=collate_fn)
     val_loader = DataLoader(val_ds, batch_size=args.batch_size, shuffle=False, collate_fn=collate_fn)
@@ -101,12 +109,28 @@ def main(args):
     best_val_acc = 0.0
     out_dir = Path(args.out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
+    idx2label = {idx: label for label, idx in dataset.label2idx.items()}
+    history = []
     for epoch in range(1, args.epochs + 1):
         t0 = time.time()
         train_loss, train_acc = train_one_epoch(model, train_loader, opt, loss_fn, device)
-        val_loss, val_acc, prec, rec, f1, cm = validate(model, val_loader, loss_fn, device)
+        val_loss, val_acc, prec, rec, f1, cm = validate(model, val_loader, loss_fn, device, n_classes=n_classes)
         dt = time.time() - t0
         print(f"Epoch {epoch}/{args.epochs} - {dt:.1f}s - train_loss={train_loss:.4f} train_acc={train_acc:.4f} val_acc={val_acc:.4f} f1={f1:.4f}")
+        history.append(
+            {
+                "epoch": epoch,
+                "train_loss": train_loss,
+                "train_acc": train_acc,
+                "val_loss": val_loss,
+                "val_acc": val_acc,
+                "precision": prec,
+                "recall": rec,
+                "f1": f1,
+            }
+        )
+        with open(out_dir / "training_history.json", "w") as f:
+            json.dump(history, f, indent=2)
         if val_acc > best_val_acc:
             best_val_acc = val_acc
             checkpoint = {
@@ -117,6 +141,8 @@ def main(args):
             if args.feature == "hf":
                 checkpoint["hf_model_name"] = args.hf_model
             torch.save(checkpoint, out_dir / "best.pth")
+            with open(out_dir / "confusion_matrix.json", "w") as f:
+                json.dump({"labels": [idx2label[i] for i in range(len(idx2label))], "matrix": cm.tolist()}, f, indent=2)
     print("Training complete. Best val acc:", best_val_acc)
 
 

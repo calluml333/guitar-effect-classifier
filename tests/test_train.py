@@ -72,13 +72,34 @@ def test_validate_returns_metrics_with_expected_shapes():
     model = EffectClassifier(input_dim=INPUT_DIM, n_classes=N_CLASSES, hidden_dim=8)
     loss_fn = torch.nn.CrossEntropyLoss()
 
-    loss, acc, prec, rec, f1, cm = validate(model, loader, loss_fn, torch.device("cpu"))
+    loss, acc, prec, rec, f1, cm = validate(model, loader, loss_fn, torch.device("cpu"), n_classes=N_CLASSES)
 
     assert np.isfinite(loss)
     assert 0.0 <= acc <= 1.0
     assert 0.0 <= prec <= 1.0
     assert 0.0 <= rec <= 1.0
     assert 0.0 <= f1 <= 1.0
+    assert cm.shape == (N_CLASSES, N_CLASSES)
+
+
+def test_validate_confusion_matrix_is_full_size_even_when_a_class_is_absent():
+    """Without an explicit n_classes, sklearn would infer the label set from
+    whatever classes appear in the batch, silently shrinking/misaligning the
+    matrix. n_classes pins it to the full, consistently-ordered label set."""
+
+    class _MissingClassDataset(Dataset):
+        def __len__(self):
+            return 4
+
+        def __getitem__(self, idx):
+            return torch.randn(INPUT_DIM), 0  # only ever yields class 0
+
+    loader = DataLoader(_MissingClassDataset(), batch_size=4, collate_fn=collate_fn)
+    model = EffectClassifier(input_dim=INPUT_DIM, n_classes=N_CLASSES, hidden_dim=8)
+    loss_fn = torch.nn.CrossEntropyLoss()
+
+    _, _, _, _, _, cm = validate(model, loader, loss_fn, torch.device("cpu"), n_classes=N_CLASSES)
+
     assert cm.shape == (N_CLASSES, N_CLASSES)
 
 
