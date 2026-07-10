@@ -5,6 +5,7 @@ Functions accept and return 1-D NumPy arrays (float32) and operate at a given sa
 from typing import Dict, Optional
 
 import numpy as np
+from scipy.signal import lfilter
 
 from src.utils import ensure_mono
 
@@ -18,13 +19,9 @@ def apply_overdrive(wave: np.ndarray, gain: float = 2.0, tone: float = 0.7) -> n
     x = x * gain
     # soft clip
     x = np.tanh(x)
-    # simple tone: lowpass using single-pole IIR
+    # simple tone: single-pole IIR lowpass, y[n] = a*x[n] + (1-a)*y[n-1]
     a = 0.01 + 0.99 * tone
-    y = np.zeros_like(x)
-    prev = 0.0
-    for i, s in enumerate(x):
-        prev = prev + (s - prev) * a
-        y[i] = prev
+    y = lfilter([a], [1.0, -(1.0 - a)], x).astype(np.float32)
     # normalize
     y = y / (np.max(np.abs(y)) + 1e-9)
     return y
@@ -64,24 +61,20 @@ def apply_chorus(wave: np.ndarray, sr: int, depth_ms: float = 10.0, rate_hz: flo
     t = np.arange(n) / sr
     depth = depth_ms / 1000.0
     lfo = (np.sin(2 * np.pi * rate_hz * t) + 1.0) / 2.0  # 0..1
-    delays = (lfo * depth)  # seconds
-    out = np.zeros_like(x)
-    for i in range(n):
-        d = delays[i]
-        idx = i - int(np.floor(d * sr))
-        frac = (d * sr) - np.floor(d * sr)
-        if idx - 1 >= 0 and idx < n:
-            # linear interpolate
-            s0 = x[idx]
-            s1 = x[idx - 1]
-            delayed = (1 - frac) * s0 + frac * s1
-        elif idx >= 0:
-            delayed = x[idx]
-        else:
-            delayed = 0.0
-        out[i] = (1.0 - mix) * x[i] + mix * delayed
+    delay_samples = lfo * depth * sr  # continuous per-sample delay, always >= 0
+
+    floor_delay = np.floor(delay_samples).astype(np.int64)
+    frac = (delay_samples - floor_delay).astype(np.float32)
+    idx = np.arange(n) - floor_delay  # always < n since floor_delay >= 0
+
+    idx0 = np.clip(idx, 0, n - 1)
+    idx1 = np.clip(idx - 1, 0, n - 1)
+    interpolated = (1 - frac) * x[idx0] + frac * x[idx1]
+    delayed = np.where(idx >= 1, interpolated, np.where(idx == 0, x[idx0], 0.0))
+
+    out = (1.0 - mix) * x + mix * delayed
     out = out / (np.max(np.abs(out)) + 1e-9)
-    return out
+    return out.astype(np.float32)
 
 
 def apply_delay(wave: np.ndarray, sr: int, delay_ms: float = 400.0, feedback: float = 0.35, mix: float = 0.5) -> np.ndarray:
