@@ -31,11 +31,3 @@ def temp_audio_file(tmp_path):
     torchaudio.save(audio_path, waveform, sample_rate)
 
     return audio_path
-
-
-@pytest.fixture(scope="session")
-def config():
-    """Return configuration for all tests."""
-    from src.config import Config
-
-    return Config()
