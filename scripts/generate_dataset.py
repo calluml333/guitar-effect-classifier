@@ -21,19 +21,9 @@ import soundfile as sf
 
 from src import config
 from src.effects import apply_effect_by_name
+from src.utils import ensure_mono, format_duration
 
 EFFECTS = config.EFFECT_CLASSES
-
-
-def format_duration(seconds: float) -> str:
-    seconds = max(int(seconds), 0)
-    minutes, seconds = divmod(seconds, 60)
-    hours, minutes = divmod(minutes, 60)
-    if hours:
-        return f"{hours:d}h{minutes:02d}m{seconds:02d}s"
-    if minutes:
-        return f"{minutes:d}m{seconds:02d}s"
-    return f"{seconds:d}s"
 
 
 def random_params_for(effect: str):
@@ -52,13 +42,6 @@ def random_params_for(effect: str):
     if effect == "reverb":
         return {"ir_len_s": random.uniform(0.5, 2.5), "decay": random.uniform(1.0, 4.0), "mix": random.uniform(0.2, 0.8)}
     return {}
-
-
-def ensure_mono(arr: np.ndarray) -> np.ndarray:
-    if arr.ndim == 2:
-        # mean across channels -> shape (n,)
-        return arr.mean(axis=1)
-    return arr
 
 
 def process_file(path: Path, out_dir: Path, sr: int, samples_per_input: int = 1):

@@ -29,6 +29,9 @@ from typing import Iterable, List, Sequence, Tuple
 import soundfile as sf
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(REPO_ROOT))
+
+from src.utils import format_duration  # noqa: E402
 DEFAULT_DOWNLOAD_DIR = REPO_ROOT / "data" / "downloads" / "idmt_smt_guitar"
 DEFAULT_OUTPUT_DIR = REPO_ROOT / "data" / "raw" / "idmt_smt_guitar"
 DEFAULT_RECORD_ID = "7544110"
@@ -76,17 +79,6 @@ def format_size(size_bytes: int) -> str:
         if size < 1024.0 or unit == units[-1]:
             return f"{size:.1f}{unit}" if unit != "B" else f"{int(size)}{unit}"
         size /= 1024.0
-
-
-def format_duration(seconds: float) -> str:
-    seconds = max(int(seconds), 0)
-    minutes, seconds = divmod(seconds, 60)
-    hours, minutes = divmod(minutes, 60)
-    if hours:
-        return f"{hours:d}h{minutes:02d}m{seconds:02d}s"
-    if minutes:
-        return f"{minutes:d}m{seconds:02d}s"
-    return f"{seconds:d}s"
 
 
 def download_file_with_progress(download_url: str, destination_path: Path, description: str) -> None:

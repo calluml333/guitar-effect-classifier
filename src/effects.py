@@ -6,11 +6,7 @@ from typing import Dict, Optional
 
 import numpy as np
 
-
-def _ensure_mono(wave: np.ndarray) -> np.ndarray:
-    if wave.ndim == 2:
-        return np.mean(wave, axis=0)
-    return wave
+from src.utils import ensure_mono
 
 
 def apply_overdrive(wave: np.ndarray, gain: float = 2.0, tone: float = 0.7) -> np.ndarray:
@@ -18,7 +14,7 @@ def apply_overdrive(wave: np.ndarray, gain: float = 2.0, tone: float = 0.7) -> n
 
     tone in [0,1] mixes between bright (1.0) and dark (0.0).
     """
-    x = _ensure_mono(wave).astype(np.float32)
+    x = ensure_mono(wave).astype(np.float32)
     x = x * gain
     # soft clip
     x = np.tanh(x)
@@ -38,7 +34,7 @@ def apply_distortion(wave: np.ndarray, drive: float = 5.0, threshold: float = 0.
     """Harder distortion: high gain then hard clip with optional smoothing.
     threshold in (0,1].
     """
-    x = _ensure_mono(wave).astype(np.float32)
+    x = ensure_mono(wave).astype(np.float32)
     x = x * drive
     x = np.clip(x, -threshold, threshold)
     # normalize
@@ -50,7 +46,7 @@ def apply_fuzz(wave: np.ndarray, gain: float = 10.0, bias: float = 0.0) -> np.nd
     """Fuzz implemented with heavy waveshaping and optional DC bias.
     Produces square-ish clipping and high harmonic content.
     """
-    x = _ensure_mono(wave).astype(np.float32)
+    x = ensure_mono(wave).astype(np.float32)
     x = x * gain + bias
     # aggressive non-linearity: sign(x) * (1 - exp(-abs(x)))
     y = np.sign(x) * (1.0 - np.exp(-np.abs(x)))
@@ -63,7 +59,7 @@ def apply_chorus(wave: np.ndarray, sr: int, depth_ms: float = 10.0, rate_hz: flo
     depth_ms: maximum modulation in milliseconds
     rate_hz: LFO frequency
     """
-    x = _ensure_mono(wave).astype(np.float32)
+    x = ensure_mono(wave).astype(np.float32)
     n = x.shape[0]
     t = np.arange(n) / sr
     depth = depth_ms / 1000.0
@@ -91,7 +87,7 @@ def apply_chorus(wave: np.ndarray, sr: int, depth_ms: float = 10.0, rate_hz: flo
 def apply_delay(wave: np.ndarray, sr: int, delay_ms: float = 400.0, feedback: float = 0.35, mix: float = 0.5) -> np.ndarray:
     """Simple single-tap delay with feedback and lowpass on repeats.
     """
-    x = _ensure_mono(wave).astype(np.float32)
+    x = ensure_mono(wave).astype(np.float32)
     delay_samps = int(sr * (delay_ms / 1000.0))
     out = np.zeros(x.shape[0] + delay_samps * 4, dtype=np.float32)
     out[: x.shape[0]] = x
@@ -121,7 +117,7 @@ def synthetic_ir(length_s: float, sr: int, decay: float = 2.0) -> np.ndarray:
 def apply_reverb(wave: np.ndarray, sr: int, ir: Optional[np.ndarray] = None, ir_len_s: float = 1.0, decay: float = 3.0, mix: float = 0.5) -> np.ndarray:
     """Apply reverb by convolving with an IR. If no IR provided, make a synthetic one.
     """
-    x = _ensure_mono(wave).astype(np.float32)
+    x = ensure_mono(wave).astype(np.float32)
     if ir is None:
         ir = synthetic_ir(ir_len_s, sr, decay=decay)
     # convolution (numpy)
@@ -134,7 +130,7 @@ def apply_reverb(wave: np.ndarray, sr: int, ir: Optional[np.ndarray] = None, ir_
 def apply_effect_by_name(wave: np.ndarray, sr: int, name: str, params: Dict) -> np.ndarray:
     name = name.lower()
     if name == "clean":
-        return _ensure_mono(wave).astype(np.float32)
+        return ensure_mono(wave).astype(np.float32)
     if name == "overdrive":
         return apply_overdrive(wave, gain=params.get("gain", 2.0), tone=params.get("tone", 0.7))
     if name == "distortion":
