@@ -12,6 +12,7 @@ import pandas as pd
 import torch
 from torch.utils.data import Dataset
 
+from src import config
 from src.audio_processing import load_audio, waveform_to_log_mel
 from src.features import HFEmbedder
 
@@ -30,8 +31,8 @@ class GuitarEffectsDataset(Dataset):
 	def __init__(
 		self,
 		manifest: str,
-		sr: int = 32000,
-		duration: float = 3.0,
+		sr: int = config.SAMPLE_RATE,
+		duration: float = config.AUDIO_DURATION,
 		feature: str = "hf",
 		hf_model_name: Optional[str] = None,
 	) -> None:
@@ -41,7 +42,7 @@ class GuitarEffectsDataset(Dataset):
 		self.feature = feature
 		self.hf = None
 		if feature == "hf":
-			model_name = hf_model_name or "facebook/wav2vec2-base-960h"
+			model_name = hf_model_name or config.DEFAULT_HF_MODEL
 			self.hf = HFEmbedder(model_name)
 
 		# build label mapping

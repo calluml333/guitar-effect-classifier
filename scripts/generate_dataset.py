@@ -19,9 +19,10 @@ import librosa
 import numpy as np
 import soundfile as sf
 
+from src import config
 from src.effects import apply_effect_by_name
 
-EFFECTS = ["clean", "overdrive", "distortion", "fuzz", "chorus", "delay", "reverb"]
+EFFECTS = config.EFFECT_CLASSES
 
 
 def format_duration(seconds: float) -> str:
@@ -137,7 +138,7 @@ if __name__ == "__main__":
     parser.add_argument("--input-dir", type=str, default="data/raw")
     parser.add_argument("--out-dir", type=str, default="data/generated")
     parser.add_argument("--manifest", type=str, default="data/manifest.csv")
-    parser.add_argument("--sr", type=int, default=32000)
+    parser.add_argument("--sr", type=int, default=config.SAMPLE_RATE)
     parser.add_argument("--samples-per-input", type=int, default=1, help="How many generated variants per input per effect")
     args = parser.parse_args()
     main(args)

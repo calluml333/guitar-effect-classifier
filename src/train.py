@@ -18,6 +18,7 @@ from sklearn.metrics import (
 )
 from torch.utils.data import DataLoader
 
+from src import config
 from src.dataset import GuitarEffectsDataset
 from src.model import build_classifier_from_dataset_sample
 
@@ -115,10 +116,10 @@ def main(args):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--manifest", type=str, default="data/manifest.csv")
-    parser.add_argument("--feature", type=str, default="hf", choices=["hf", "log-mel", "waveform"]) 
-    parser.add_argument("--hf-model", type=str, default="facebook/wav2vec2-base-960h")
-    parser.add_argument("--sr", type=int, default=32000)
-    parser.add_argument("--duration", type=float, default=3.0)
+    parser.add_argument("--feature", type=str, default="hf", choices=["hf", "log-mel", "waveform"])
+    parser.add_argument("--hf-model", type=str, default=config.DEFAULT_HF_MODEL)
+    parser.add_argument("--sr", type=int, default=config.SAMPLE_RATE)
+    parser.add_argument("--duration", type=float, default=config.AUDIO_DURATION)
     parser.add_argument("--epochs", type=int, default=5)
     parser.add_argument("--batch-size", type=int, default=16)
     parser.add_argument("--lr", type=float, default=1e-3)

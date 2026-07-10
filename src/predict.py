@@ -5,6 +5,7 @@ from typing import Dict, List, Optional, Tuple
 import numpy as np
 import torch
 
+from src import config
 from src.audio_processing import load_audio, waveform_to_log_mel
 from src.features import HFEmbedder
 from src.model import EffectClassifier
@@ -30,7 +31,7 @@ def build_model_from_feature(feature_tensor: torch.Tensor, n_classes: int, devic
     return model
 
 
-def extract_feature(wave: torch.Tensor, sr: int, feature: str = "hf", hf_model_name: str = "facebook/wav2vec2-base-960h") -> torch.Tensor:
+def extract_feature(wave: torch.Tensor, sr: int, feature: str = "hf", hf_model_name: str = config.DEFAULT_HF_MODEL) -> torch.Tensor:
     if feature == "waveform":
         return wave
     if feature == "log-mel":
@@ -45,9 +46,9 @@ def predict_audio(
     audio_path: str,
     checkpoint_path: str,
     feature: str = "hf",
-    hf_model_name: str = "facebook/wav2vec2-base-960h",
-    sr: int = 32000,
-    duration: float = 3.0,
+    hf_model_name: str = config.DEFAULT_HF_MODEL,
+    sr: int = config.SAMPLE_RATE,
+    duration: float = config.AUDIO_DURATION,
     topk: int = 3,
     use_cuda: bool = False,
 ) -> List[Tuple[str, float]]:

@@ -8,6 +8,7 @@ if str(ROOT) not in sys.path:
 
 import streamlit as st
 
+from src import config
 from src.predict import format_predictions, predict_audio
 
 st.set_page_config(page_title="Guitar Effect Classifier", layout="wide")
@@ -36,9 +37,9 @@ if uploaded_file is not None:
                     audio_path=tmp_path,
                     checkpoint_path=checkpoint,
                     feature=feature,
-                    hf_model_name="facebook/wav2vec2-base-960h",
-                    sr=32000,
-                    duration=3.0,
+                    hf_model_name=config.DEFAULT_HF_MODEL,
+                    sr=config.SAMPLE_RATE,
+                    duration=config.AUDIO_DURATION,
                     topk=5,
                     use_cuda=False,
                 )

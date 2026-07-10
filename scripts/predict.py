@@ -1,6 +1,7 @@
 """Inference CLI for guitar effect classification."""
 import argparse
 
+from src import config
 from src.predict import format_predictions, predict_audio
 
 
@@ -9,9 +10,9 @@ def main():
     parser.add_argument("--audio", type=str, required=True, help="Path to input audio file")
     parser.add_argument("--checkpoint", type=str, required=True, help="Path to saved model checkpoint")
     parser.add_argument("--feature", type=str, default="hf", choices=["hf", "log-mel", "waveform"])
-    parser.add_argument("--hf-model", type=str, default="facebook/wav2vec2-base-960h")
-    parser.add_argument("--sr", type=int, default=32000)
-    parser.add_argument("--duration", type=float, default=3.0)
+    parser.add_argument("--hf-model", type=str, default=config.DEFAULT_HF_MODEL)
+    parser.add_argument("--sr", type=int, default=config.SAMPLE_RATE)
+    parser.add_argument("--duration", type=float, default=config.AUDIO_DURATION)
     parser.add_argument("--topk", type=int, default=3)
     parser.add_argument("--use-cuda", action="store_true")
     args = parser.parse_args()

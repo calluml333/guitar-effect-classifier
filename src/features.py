@@ -6,6 +6,8 @@ import numpy as np
 import torch
 from transformers import AutoFeatureExtractor, AutoModel
 
+from src import config
+
 
 class HFEmbedder:
     """Load a Hugging Face audio model and extract fixed-size embeddings.
@@ -15,7 +17,7 @@ class HFEmbedder:
         vec = emb.extract(torch_tensor_waveform, sr=16000)
     """
 
-    def __init__(self, model_name: str = "facebook/wav2vec2-base-960h", device: Optional[str] = None):
+    def __init__(self, model_name: str = config.DEFAULT_HF_MODEL, device: Optional[str] = None):
         self.model_name = model_name
         self.feature_extractor = AutoFeatureExtractor.from_pretrained(model_name)
         self.sampling_rate = int(getattr(self.feature_extractor, "sampling_rate", 16000))
