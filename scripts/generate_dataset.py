@@ -22,9 +22,12 @@ import soundfile as sf
 
 from src import config
 from src.effects import apply_effect_by_name
-from src.utils import ensure_mono, format_duration
+from src.utils import ensure_mono, format_duration, format_size
 
 EFFECTS = config.EFFECT_CLASSES
+
+WAV_HEADER_BYTES = 44
+BYTES_PER_SAMPLE = 2  # sf.write() defaults to PCM_16 for WAV output regardless of the input array's dtype
 
 
 def random_params_for(effect: str):
@@ -43,6 +46,20 @@ def random_params_for(effect: str):
     if effect == "reverb":
         return {"ir_len_s": random.uniform(0.5, 2.5), "decay": random.uniform(1.0, 4.0), "mix": random.uniform(0.2, 0.8)}
     return {}
+
+
+def estimate_output_bytes(files, sr: int, samples_per_input: int) -> int:
+    """Estimate total output size from each input file's duration (via a
+    cheap header-only read), without decoding or resampling any audio.
+    """
+    total_bytes = 0
+    for path in files:
+        info = sf.info(str(path))
+        duration_s = info.frames / info.samplerate
+        num_samples = int(duration_s * sr)
+        bytes_per_variant = num_samples * BYTES_PER_SAMPLE + WAV_HEADER_BYTES
+        total_bytes += bytes_per_variant * len(EFFECTS) * samples_per_input
+    return total_bytes
 
 
 def process_file(
@@ -91,6 +108,14 @@ def main(args):
         return
     total_files = len(files)
     generated_files = total_files * len(EFFECTS) * args.samples_per_input
+    estimated_bytes = estimate_output_bytes(files, args.sr, args.samples_per_input)
+    print(f"This will generate {generated_files} files (~{format_size(estimated_bytes)}) in {out_dir}")
+    if not args.yes:
+        reply = input("Proceed? [y/N]: ").strip().lower()
+        if reply not in ("y", "yes"):
+            print("Aborted.")
+            return
+
     started = time.perf_counter()
     written = 0
 
@@ -143,5 +168,6 @@ if __name__ == "__main__":
     parser.add_argument("--sr", type=int, default=config.SAMPLE_RATE)
     parser.add_argument("--samples-per-input", type=int, default=1, help="How many generated variants per input per effect")
     parser.add_argument("--seed", type=int, default=config.RANDOM_SEED)
+    parser.add_argument("-y", "--yes", action="store_true", help="Skip the size estimate confirmation prompt")
     args = parser.parse_args()
     main(args)

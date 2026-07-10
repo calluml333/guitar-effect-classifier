@@ -112,6 +112,8 @@ poetry run python scripts/generate_dataset.py \
 
 This will create processed audio files and a manifest CSV containing labels and effect parameters. Effect parameters are randomized per file (see `random_params_for` in the script); pass `--seed` (default `config.RANDOM_SEED`) to reproduce an identical dataset across runs.
 
+Before writing anything, it prints an estimated output file count and disk size and asks for confirmation (based on each input file's duration, so it's cheap even for large inputs). Pass `--yes`/`-y` to skip the prompt for non-interactive use.
+
 ## Train the model
 
 Training uses the manifest generated above:

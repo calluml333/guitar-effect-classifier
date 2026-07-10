@@ -24,3 +24,13 @@ def format_duration(seconds: float) -> str:
     if minutes:
         return f"{minutes:d}m{seconds:02d}s"
     return f"{seconds:d}s"
+
+
+def format_size(size_bytes: float) -> str:
+    """Format a byte count as e.g. '512B', '1.5MB', '2.0GB'."""
+    units = ["B", "KB", "MB", "GB", "TB"]
+    size = float(size_bytes)
+    for unit in units:
+        if size < 1024.0 or unit == units[-1]:
+            return f"{size:.1f}{unit}" if unit != "B" else f"{int(size)}{unit}"
+        size /= 1024.0

@@ -9,7 +9,7 @@ import zipfile
 from pathlib import Path
 from typing import List
 
-from src.utils import format_duration
+from src.utils import format_duration, format_size
 
 
 def resolve_archive_name(entry: dict, download_url: str) -> str:
@@ -24,15 +24,6 @@ def resolve_archive_name(entry: dict, download_url: str) -> str:
         if len(parts) >= 2:
             return parts[-2]
     return parsed_name
-
-
-def format_size(size_bytes: int) -> str:
-    units = ["B", "KB", "MB", "GB", "TB"]
-    size = float(size_bytes)
-    for unit in units:
-        if size < 1024.0 or unit == units[-1]:
-            return f"{size:.1f}{unit}" if unit != "B" else f"{int(size)}{unit}"
-        size /= 1024.0
 
 
 def download_file_with_progress(download_url: str, destination_path: Path, description: str) -> None:
