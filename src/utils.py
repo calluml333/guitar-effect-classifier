@@ -1,5 +1,7 @@
 """Small helpers shared across dataset generation, DSP, and CLI scripts."""
 
+import time
+
 import numpy as np
 
 
@@ -34,3 +36,27 @@ def format_size(size_bytes: float) -> str:
         if size < 1024.0 or unit == units[-1]:
             return f"{size:.1f}{unit}" if unit != "B" else f"{int(size)}{unit}"
         size /= 1024.0
+
+
+def print_progress(prefix: str, current: int, total: int, started: float, extra: str = "") -> None:
+    """Print an in-place progress bar (overwritten via carriage return).
+
+    Call once per completed unit of work with a shared `started =
+    time.perf_counter()` timestamp; call bare `print()` after the loop
+    finishes to move off the in-place line. `extra` is appended after the
+    percentage, e.g. a running loss or accuracy figure.
+    """
+    elapsed = max(time.perf_counter() - started, 1e-6)
+    rate = current / elapsed
+    eta = (total - current) / rate if rate > 0 else 0.0
+    progress = current / total if total else 1.0
+    bar_width = 24
+    filled = int(progress * bar_width)
+    bar = "#" * filled + "-" * (bar_width - filled)
+    suffix = f" {extra}" if extra else ""
+    print(
+        f"\r{prefix}: [{bar}] {current}/{total} ({progress * 100:5.1f}%){suffix} "
+        f"Elapsed {format_duration(elapsed)} ETA {format_duration(eta)}",
+        end="",
+        flush=True,
+    )

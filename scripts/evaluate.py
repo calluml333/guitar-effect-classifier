@@ -20,6 +20,7 @@ Usage:
 import argparse
 import json
 import sys
+import time
 from pathlib import Path
 from typing import Dict, List, Optional
 
@@ -45,6 +46,7 @@ from src.predict import (
     load_checkpoint,
     resolve_feature_settings,
 )
+from src.utils import print_progress
 
 
 def plot_training_curves(history: List[Dict], out_dir: Path) -> None:
@@ -104,12 +106,17 @@ def evaluate_manifest(
     label2idx = checkpoint["label2idx"]
     idx2label = {int(idx): label for label, idx in label2idx.items()}
 
+    if feature == "hf":
+        print(f"Loading pretrained model '{hf_model_name}' -- may download weights on first run.", flush=True)
     embedder = HFEmbedder(model_name=hf_model_name, device="cpu") if feature == "hf" else None
 
     df = pd.read_csv(manifest_path)
+    total = len(df)
+    print(f"Evaluating {total} files from {manifest_path} (feature={feature})...", flush=True)
     model: Optional[torch.nn.Module] = None
     rows = []
-    for _, row in df.iterrows():
+    started = time.perf_counter()
+    for i, (_, row) in enumerate(df.iterrows(), start=1):
         wave = load_audio(row["filename"], sr=sr, duration=duration)
         feature_tensor = extract_feature(wave, sr, feature=feature, hf_model_name=hf_model_name, embedder=embedder)
         flat = feature_tensor.flatten().unsqueeze(0).to(device)
@@ -132,6 +139,9 @@ def evaluate_manifest(
                 "top_predictions": json.dumps(top_predictions),
             }
         )
+        running_acc = sum(r["correct"] for r in rows) / len(rows)
+        print_progress("Evaluating", i, total, started, extra=f"acc={running_acc:.3f}")
+    print()
     return pd.DataFrame(rows)
 
 

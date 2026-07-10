@@ -5,7 +5,7 @@ trim/pad to fixed duration, and generating log-mel spectrograms.
 
 Functions return PyTorch tensors (float32).
 """
-from typing import Optional, Tuple
+from typing import Optional
 
 import librosa
 import numpy as np
@@ -28,7 +28,8 @@ def load_audio(
         sr: Target sample rate.
         mono: Convert to mono by averaging channels.
         normalize: Scale waveform to max abs 0.98.
-        trim_db: If set, trim leading/trailing silence below (max_db - trim_db).
+        trim_db: If set, trim leading/trailing silence below
+				 (max_db - trim_db).
         duration: If set, pad or trim to `duration` seconds.
 
     Returns:
@@ -48,27 +49,28 @@ def load_audio(
         if data.ndim == 1:
             data = librosa.resample(data, orig_sr=orig_sr, target_sr=sr)
         else:
-            data = np.stack([librosa.resample(d, orig_sr=orig_sr, target_sr=sr) for d in data], axis=0)
+            data = np.stack([librosa.resample(d, orig_sr=orig_sr, target_sr=sr) for d in data], axis=0)  # noqa: E501
     # convert to torch tensor
     wave = torch.from_numpy(data).to(torch.float32)
     if wave.dim() == 2 and wave.shape[0] > 1 and mono:
         wave = wave.mean(dim=0)
 
     if trim_db is not None:
-        # simple energy-based trim: compute frame-wise dB and find region above threshold
+        # simple energy-based trim: compute frame-wise dB and find
+		# region above threshold
         abs_wave = wave.abs()
         # compute short-time energy with a small frame (hop ~ 10 ms)
         hop = max(1, int(0.01 * sr))
         frame_len = hop * 2
         frames = (
-            abs_wave.unfold(0, frame_len, hop).pow(2).mean(dim=1).clamp(min=1e-12)
+            abs_wave.unfold(0, frame_len, hop).pow(2).mean(dim=1).clamp(min=1e-12)  # noqa: E501
         )
         db = 10.0 * torch.log10(frames)
         max_db = db.max()
         mask = db >= (max_db - trim_db)
         if mask.any():
             first = int(max(0, (mask.nonzero()[0].item() * hop) - frame_len))
-            last = int(min(wave.shape[0], (mask.nonzero()[-1].item() * hop) + frame_len))
+            last = int(min(wave.shape[0], (mask.nonzero()[-1].item() * hop) + frame_len))  # noqa: E501
             wave = wave[first:last]
 
     if duration is not None:
@@ -109,13 +111,23 @@ def waveform_to_log_mel(
     else:
         wave_np = wave.cpu().numpy()
     S = librosa.feature.melspectrogram(
-        y=wave_np, sr=sr, n_fft=n_fft, hop_length=hop_length, n_mels=n_mels, fmin=f_min, fmax=f_max, power=2.0
+        y=wave_np,
+        sr=sr,
+        n_fft=n_fft,
+        hop_length=hop_length,
+        n_mels=n_mels,
+        fmin=f_min,
+        fmax=f_max,
+        power=2.0
     )
     log_mel = librosa.power_to_db(S, ref=np.max)
     return torch.from_numpy(log_mel).to(torch.float32)
 
 
-def normalize_wave_rms(wave: torch.Tensor, target_rms: float = 0.1) -> torch.Tensor:
+def normalize_wave_rms(
+    wave: torch.Tensor,
+    target_rms: float = 0.1,
+) -> torch.Tensor:
     """RMS normalise waveform to target RMS amplitude.
 
     wave: 1-D tensor.
@@ -124,4 +136,3 @@ def normalize_wave_rms(wave: torch.Tensor, target_rms: float = 0.1) -> torch.Ten
         wave = wave.squeeze(0)
     rms = torch.sqrt(torch.mean(wave.pow(2))).clamp(min=1e-9)
     return wave * (target_rms / rms)
-

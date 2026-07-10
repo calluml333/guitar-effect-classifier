@@ -18,14 +18,16 @@ from src.features import HFEmbedder
 
 
 class GuitarEffectsDataset(Dataset):
-    """PyTorch Dataset reading a CSV manifest with fields: filename,label,params
+    """PyTorch Dataset reading a CSV manifest with fields:
+    filename,label,params
 
     Args:
         manifest: path to CSV manifest
         sr: target sample rate
         duration: clip duration in seconds
         feature: 'waveform'|'log-mel'|'hf' — which feature to return
-        hf_model_name: if feature=='hf', the HF model name to use for embeddings
+        hf_model_name: if feature=='hf', the HF model name to use for
+        			   embeddings
     """
 
     def __init__(
@@ -59,7 +61,8 @@ class GuitarEffectsDataset(Dataset):
         label = row["label"]
         load_sr = self.sr
         if self.feature == "hf" and self.hf is not None:
-            # Avoid double resampling by loading directly at the HF model rate.
+            # Avoid double resampling by loading directly at the HF
+			# model rate.
             load_sr = self.hf.sampling_rate
         wave = load_audio(filepath, sr=load_sr, duration=self.duration)
         if self.feature == "waveform":
@@ -71,4 +74,3 @@ class GuitarEffectsDataset(Dataset):
             emb = self.hf.extract(wave, sr=load_sr)
             return emb, self.label2idx[label]
         raise ValueError(f"Unknown feature type: {self.feature}")
-
