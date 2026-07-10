@@ -42,13 +42,24 @@ def resolve_feature_settings(
     return resolved_feature, resolved_hf_model
 
 
-def extract_feature(wave: torch.Tensor, sr: int, feature: str = config.DEFAULT_FEATURE, hf_model_name: str = config.DEFAULT_HF_MODEL) -> torch.Tensor:
+def extract_feature(
+    wave: torch.Tensor,
+    sr: int,
+    feature: str = config.DEFAULT_FEATURE,
+    hf_model_name: str = config.DEFAULT_HF_MODEL,
+    embedder: Optional[HFEmbedder] = None,
+) -> torch.Tensor:
+    """Extract the given feature type from a waveform.
+
+    For feature=='hf', pass a pre-built `embedder` when calling this in a
+    loop over many files to avoid reloading the pretrained model each time.
+    """
     if feature == "waveform":
         return wave
     if feature == "log-mel":
         return waveform_to_log_mel(wave, sr=sr)
     if feature == "hf":
-        embedder = HFEmbedder(model_name=hf_model_name, device="cpu")
+        embedder = embedder or HFEmbedder(model_name=hf_model_name, device="cpu")
         return embedder.extract(wave, sr=sr)
     raise ValueError(f"Unsupported feature type: {feature}")
 
