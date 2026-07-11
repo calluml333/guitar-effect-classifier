@@ -262,6 +262,8 @@ From `models/training_history.json`:
 
 Both loss and accuracy were still improving at epoch 2 with no sign of plateauing — more epochs would likely improve results further.
 
+On the machine this was run on, these 2 epochs took **~2 hours** end to end (CPU, no GPU flags used). That's slow for 4,655 examples/epoch, and is expected: `--feature hf` recomputes AST embeddings from scratch for every sample on every epoch (nothing caches them, since the backbone is frozen and its output never changes), on a single-process `DataLoader`. Caching embeddings after the first pass — or extracting them once as a preprocessing step — would substantially cut this down; see [Future improvements](#future-improvements).
+
 ![Training/validation loss curve](outputs/visualizations/loss_curve.png)
 
 ![Training/validation accuracy curve](outputs/visualizations/accuracy_curve.png)
@@ -301,6 +303,7 @@ poetry run pytest -q
 
 - Persist an explicit held-out test split (separate from the train/val split used during training) so `scripts/evaluate.py` can report a trustworthy test accuracy instead of scoring against the full training manifest — see the caveat in [Results](#results).
 - Train for more than 2 epochs — loss/accuracy were still improving with no sign of plateauing.
+- Cache AST embeddings (or extract them once as a preprocessing pass) instead of recomputing them from scratch every epoch — the current `--feature hf` path took ~2 hours for 2 epochs on 4,655 examples on CPU, almost entirely re-extraction cost.
 - Investigate the distortion/fuzz confusion seen in the [Results](#results) confusion matrix — possibly tighter/less-overlapping parameter ranges in `random_params_for` (`scripts/generate_dataset.py`), or an explicit feature more sensitive to clipping harmonics.
 - Add an architecture diagram.
 - Extend `scripts/generate_dataset.py` to window/segment long source recordings into multiple clips, and/or apply waveform-level augmentation (gain jitter, pitch/time shift, noise) before effects are applied, for more training diversity than effect-parameter randomization alone.
