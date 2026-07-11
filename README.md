@@ -16,6 +16,30 @@ The goal of this project is to classify guitar recordings into common effect cat
 
 The project is designed as a portfolio-style machine learning workflow with a clear structure for data generation, model training, evaluation, and inference.
 
+## Architecture
+
+```mermaid
+flowchart LR
+    A["IDMT-SMT-Guitar dataset<br/>or your own clean clips"] -->|"install_idmt_guitar_dataset.py"| B["data/raw/*.wav"]
+    B -->|"generate_dataset.py<br/>apply 7 DSP effects"| C["data/generated/*.wav<br/>+ manifest.csv"]
+
+    C --> D["GuitarEffectsDataset<br/>load / resample / normalize"]
+    D --> E{"--feature"}
+    E -->|"hf"| F["AST embedding<br/>(frozen pretrained model)"]
+    E -->|"log-mel"| G["Log-mel spectrogram"]
+    E -->|"waveform"| H["Raw waveform"]
+
+    F --> I["EffectClassifier (MLP)"]
+    G --> I
+    H --> I
+
+    I -->|"src/train.py"| J["models/best.pth<br/>training_history.json<br/>confusion_matrix.json"]
+
+    J --> K["scripts/predict.py<br/>CLI inference"]
+    J --> L["scripts/evaluate.py<br/>plots + predictions.csv"]
+    J --> M["app/streamlit_app.py<br/>interactive demo"]
+```
+
 ## What is implemented so far
 
 - Synthetic dataset generation using DSP-style effect processing
@@ -305,6 +329,5 @@ poetry run pytest -q
 - Train for more than 2 epochs — loss/accuracy were still improving with no sign of plateauing.
 - Cache AST embeddings (or extract them once as a preprocessing pass) instead of recomputing them from scratch every epoch — the current `--feature hf` path took ~2 hours for 2 epochs on 4,655 examples on CPU, almost entirely re-extraction cost.
 - Investigate the distortion/fuzz confusion seen in the [Results](#results) confusion matrix — possibly tighter/less-overlapping parameter ranges in `random_params_for` (`scripts/generate_dataset.py`), or an explicit feature more sensitive to clipping harmonics.
-- Add an architecture diagram.
 - Extend `scripts/generate_dataset.py` to window/segment long source recordings into multiple clips, and/or apply waveform-level augmentation (gain jitter, pitch/time shift, noise) before effects are applied, for more training diversity than effect-parameter randomization alone.
 - Compare the AST embedding backbone against BEATs/CLAP now that the feature-extraction path is model-agnostic.
