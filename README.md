@@ -235,6 +235,45 @@ It also prints overall accuracy and a handful of correct/incorrect example predi
 | `--num-examples` | `5` | Number of correct/incorrect example predictions to print to the console |
 | `--use-cuda` | off | Use CUDA if available |
 
+## Results
+
+Example end-to-end run against IDMT-SMT-Guitar-sourced recordings (see [Install the IDMT-SMT-Guitar dataset locally](#install-the-idmt-smt-guitar-dataset-locally)), generating 5 randomized variants per effect per source file:
+
+```bash
+poetry run python scripts/generate_dataset.py --input-dir data/raw --out-dir data/generated --manifest data/manifest.csv --sr 44100 --samples-per-input 5
+poetry run python -m src.train --manifest data/manifest.csv --feature hf --epochs 2 --out-dir models
+poetry run python scripts/evaluate.py --checkpoint models/best.pth --manifest data/manifest.csv
+```
+
+This produced a perfectly balanced dataset of 4,655 examples (665 per class) and, after 2 epochs of training a classifier head on frozen AST embeddings:
+
+**87.65% accuracy** (4,080/4,655 correct) evaluating the trained checkpoint back over the full generation manifest.
+
+> **Caveat:** that figure comes from `scripts/evaluate.py --manifest data/manifest.csv` scoring against the *entire* manifest, which includes the ~90% of examples the model was trained on (`--val-split` defaults to 0.1) — it's not a clean held-out test score. The more honest "unseen data" number is the epoch 2 **validation accuracy: 85.4%** (table below). A proper train/val/test split with a persisted held-out set is listed under [Future improvements](#future-improvements).
+
+### Per-epoch metrics
+
+From `models/training_history.json`:
+
+| Epoch | Train Loss | Train Acc | Val Loss | Val Acc | Precision | Recall | F1 |
+|---|---|---|---|---|---|---|---|
+| 1 | 0.838 | 65.0% | 0.528 | 74.8% | 0.786 | 0.757 | 0.731 |
+| 2 | 0.494 | 79.7% | 0.397 | 85.4% | 0.864 | 0.860 | 0.859 |
+
+Both loss and accuracy were still improving at epoch 2 with no sign of plateauing — more epochs would likely improve results further.
+
+![Training/validation loss curve](outputs/visualizations/loss_curve.png)
+
+![Training/validation accuracy curve](outputs/visualizations/accuracy_curve.png)
+
+### Confusion matrix
+
+![Confusion matrix](outputs/visualizations/confusion_matrix.png)
+
+**Reverb (100%, 665/665) and delay (99.5%, 662/665)** are classified almost perfectly — both have distinctive time-domain signatures (a convolution tail, a discrete echo) that are easy to separate from the rest. The dominant confusion is **distortion vs. fuzz**: 180 of 665 distortion examples (27%) were predicted as fuzz, and 65 of 665 fuzz examples (10%) were predicted as distortion — both are aggressive gain-stage/clipping effects with overlapping harmonic content, which is exactly the kind of failure mode flagged when this project was first reviewed against its original spec. There's smaller secondary bleed: chorus and clean both draw a meaningful number of predictions toward delay (40 and 60 respectively), and overdrive bleeds into clean (33) and fuzz (31).
+
+Full per-file predictions (filename/true/predicted/confidence/top-k) are written to `outputs/visualizations/predictions.csv` by `scripts/evaluate.py` — gitignored since it's regenerable per-run output; rerun the commands above to reproduce it.
+
 ## Run the Streamlit demo
 
 Start the interactive demo with:
@@ -260,7 +299,9 @@ poetry run pytest -q
 
 ## Future improvements
 
-- Report real results here (accuracy/F1 and example predictions) once trained on a larger, non-synthetic-only dataset — the current pipeline has only been validated on tiny toy runs.
+- Persist an explicit held-out test split (separate from the train/val split used during training) so `scripts/evaluate.py` can report a trustworthy test accuracy instead of scoring against the full training manifest — see the caveat in [Results](#results).
+- Train for more than 2 epochs — loss/accuracy were still improving with no sign of plateauing.
+- Investigate the distortion/fuzz confusion seen in the [Results](#results) confusion matrix — possibly tighter/less-overlapping parameter ranges in `random_params_for` (`scripts/generate_dataset.py`), or an explicit feature more sensitive to clipping harmonics.
 - Add an architecture diagram.
 - Extend `scripts/generate_dataset.py` to window/segment long source recordings into multiple clips, and/or apply waveform-level augmentation (gain jitter, pitch/time shift, noise) before effects are applied, for more training diversity than effect-parameter randomization alone.
 - Compare the AST embedding backbone against BEATs/CLAP now that the feature-extraction path is model-agnostic.

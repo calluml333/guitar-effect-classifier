@@ -229,4 +229,6 @@ models/*.json
 models/checkpoints/
 
 # Outputs and logs
-outputs/*
+outputs/predictions/*
+outputs/training_logs/*
+outputs/visualizations/*.csv
